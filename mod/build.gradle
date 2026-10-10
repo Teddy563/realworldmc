@@ -1,0 +1,150 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = "realworldmc"
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"realworldmc" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.named('jar') {
+	from('../LICENSE')
+	from('../NOTICE')
+	from('../LICENSES') { into 'LICENSES' }
+}
+
+sourceSets {
+    main { java.srcDir '../shared/src/main/java' }
+	checks {
+		compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+		runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+	}
+}
+tasks.register('streetNavigationChecks', JavaExec) {
+	dependsOn tasks.named('checksClasses')
+	classpath = sourceSets.checks.runtimeClasspath
+	mainClass = 'dev.realworldmc.StreetNavigationChecks'
+}
+tasks.named('check') { dependsOn tasks.named('streetNavigationChecks') }
+tasks.register('setupChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.SetupChecks'
+}
+tasks.named('check') { dependsOn tasks.named('setupChecks') }
+tasks.register('serviceRuntimeChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.ServiceRuntimeChecks'
+}
+tasks.named('check') { dependsOn tasks.named('serviceRuntimeChecks') }
+tasks.register('bundledServiceChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+}
+tasks.named('check') { dependsOn tasks.named('bundledServiceChecks') }
+tasks.register('standaloneJarChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    doFirst { if (!project.hasProperty('releaseJar')) throw new GradleException('Pass -PreleaseJar=path/to/release.jar') }
+    classpath = files(project.findProperty('releaseJar') ?: 'missing.jar') + sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+    args 'release'
+    environment 'PATH', '' // Release check must use bundled Node, never the developer's Node.
+}
+
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = 'realworldmc-gametest'
+		enableGameTests = true
+		enableClientGameTests = false
+	}
+}
+
+// Isolated client rendering checks. No check classes or mods enter the release JAR.
+sourceSets {
+    main { java.srcDir '../shared/src/main/java' }
+    clientcheck {
+        compileClasspath += sourceSets.client.compileClasspath + sourceSets.client.output + sourceSets.main.output
+        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.client.output + sourceSets.main.output
+    }
+}
+loom {
+    mods { 'realworldmc-clientcheck' { sourceSet sourceSets.clientcheck } }
+    runs {
+        photoCheck {
+            client()
+            source sourceSets.clientcheck
+            runDir 'run-photo-check'
+            vmArg '-Drealworldmc.photoCheck=true'
+            programArg '--width'
+            programArg '256'
+            programArg '--height'
+            programArg '256'
+        }
+    }
+}
+if (project.hasProperty('photoModDir')) {
+    dependencies {
+        modRuntimeOnly fileTree(dir: project.property('photoModDir'), includes: ['iris-*.jar', 'sodium-fabric-*.jar'])
+    }
+}
+// Optional local compatibility fixture; these mods never enter a release artifact.
+if (project.hasProperty('photoExtraModDir')) {
+    dependencies { modRuntimeOnly fileTree(dir: project.property('photoExtraModDir'), includes: ['*.jar']) }
+}
+
+tasks.register('clientCheckJar', Jar) {
+    archiveClassifier = 'clientcheck-dev'
+    from sourceSets.clientcheck.output
+}
+tasks.register('remapClientCheckJar', net.fabricmc.loom.task.RemapJarTask) {
+    dependsOn tasks.named('clientCheckJar')
+    inputFile = tasks.named('clientCheckJar', Jar).flatMap { it.archiveFile }
+    archiveClassifier = 'clientcheck'
+    addNestedDependencies = false
+}
+
+tasks.register('spawnLocationChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.SpawnLocationChecks'
+}
+tasks.named('check') { dependsOn tasks.named('spawnLocationChecks') }

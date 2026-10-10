@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"realworldmc-gametest","version":"1.0.0","name":"RealWorldMC isolated physics tests","environment":"server","entrypoints":{"fabric-gametest":["dev.realworldmc.StreetPhysicsTests"]}}

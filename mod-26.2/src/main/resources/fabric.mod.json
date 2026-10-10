@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "realworldmc",
+  "version": "${version}",
+  "name": "RealWorldMC",
+  "icon": "assets/realworldmc/icon.png",
+  "description": "Explore real places with streamed 3D maps. Experimental Minecraft 26.2 build; Street View opens in a browser. Requires map access and a local service.",
+  "authors": [
+    "Teddy563"
+  ],
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.realworldmc.RealWorldMC"
+    ],
+    "client": [
+      "dev.realworldmc.client.RealWorldMCClient"
+    ]
+  },
+  "mixins": [
+    "realworldmc.mixins.json",
+    {
+      "config": "realworldmc.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "=26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "provides": [
+    "earthcraft"
+  ]
+}

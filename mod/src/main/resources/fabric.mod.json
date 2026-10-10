@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "realworldmc",
+  "version": "${version}",
+  "name": "RealWorldMC",
+  "icon": "assets/realworldmc/icon.png",
+  "description": "Explore real places, fly over 3D maps, and build in Street View. Requires your own map access and a local service.",
+  "authors": [
+    "Teddy563"
+  ],
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.realworldmc.RealWorldMC"
+    ],
+    "client": [
+      "dev.realworldmc.client.RealWorldMCClient"
+    ]
+  },
+  "mixins": [
+    "realworldmc.mixins.json",
+    {
+      "config": "realworldmc.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "=1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "provides": [
+    "earthcraft"
+  ]
+}

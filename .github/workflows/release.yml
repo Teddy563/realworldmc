@@ -1,0 +1,106 @@
+name: Build and release RealWorldMC
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: realworldmc-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - minecraft: '1.21.1'
+            module: mod
+            java: '21'
+          - minecraft: '26.2'
+            module: mod-26.2
+            java: '25'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check release versions match
+        shell: pwsh
+        env:
+          MODULE: ${{ matrix.module }}
+        run: |
+          $version = ((Get-Content "$env:MODULE/gradle.properties" | Where-Object { $_ -match '^version=' }) -split '=',2)[1].Trim()
+          $service = (Get-Content service/package.json -Raw | ConvertFrom-Json).version
+          if ($version -ne $service) { throw 'Both Gradle projects and the service must use the same version.' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag must match version in both Gradle projects.' }
+      - name: Test local services
+        working-directory: service
+        run: |
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build and check mod
+        working-directory: ${{ matrix.module }}
+        run: |
+          ./gradlew.bat --no-daemon build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test 1.21.1 gameplay logic
+        if: matrix.minecraft == '1.21.1'
+        working-directory: mod
+        run: |
+          ./gradlew.bat --no-daemon runGameTest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package full download
+        run: ./build-release.ps1 -MinecraftVersion '${{ matrix.minecraft }}'
+      - name: Verify standalone JAR extraction and automatic services
+        shell: pwsh
+        run: |
+          $jar = (Get-ChildItem release-output -Filter '*-mc${{ matrix.minecraft }}.jar').FullName
+          ./${{ matrix.module }}/gradlew.bat -p ${{ matrix.module }} --no-daemon standaloneJarChecks "-PreleaseJar=$jar"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify clean pack import without installed Node
+        shell: pwsh
+        run: |
+          Get-ChildItem release-output -Filter '*.mrpack' | ForEach-Object { ./test-pack.ps1 -Pack $_.FullName }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: download-${{ matrix.minecraft }}
+          path: |
+            release-output/*.zip
+            release-output/*.jar
+            release-output/*.mrpack
+            release-output/*.sha256
+          if-no-files-found: error
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then args+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" downloads/* --verify-tag --draft --title "RealWorldMC $RELEASE_TAG" --generate-notes "${args[@]}"
+          gh release edit "$RELEASE_TAG" --draft=false

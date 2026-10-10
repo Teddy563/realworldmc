@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "dev.realworldmc.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "GameRendererMixin",
+    "ClientLevelMixin",
+    "KeyboardInputMixin",
+    "PhotoTerrainMixin",
+    "PhotoColorMaskMixin",
+    "PhotoCameraMixin",
+    "PhotoIrisMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

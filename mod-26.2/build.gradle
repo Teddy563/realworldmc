@@ -1,0 +1,80 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = "realworldmc-mc26.2"
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"realworldmc" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+tasks.named('jar') {
+	from('../LICENSE')
+	from('../NOTICE')
+	from('../LICENSES') { into 'LICENSES' }
+}
+
+sourceSets {
+    main { java.srcDir '../shared/src/main/java' }
+    checks {
+        java.srcDir '../mod/src/checks/java'
+        java.include 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+tasks.register('bundledServiceChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+}
+tasks.named('check') { dependsOn tasks.named('bundledServiceChecks') }
+tasks.register('standaloneJarChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    doFirst { if (!project.hasProperty('releaseJar')) throw new GradleException('Pass -PreleaseJar=path/to/release.jar') }
+    classpath = files(project.findProperty('releaseJar') ?: 'missing.jar') + sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+    args 'release'
+    environment 'PATH', ''
+}
+
+tasks.register('spawnLocationChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.SpawnLocationChecks'
+}
+tasks.named('check') { dependsOn tasks.named('spawnLocationChecks') }

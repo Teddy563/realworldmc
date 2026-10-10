@@ -1,0 +1,12 @@
+{
+  "generator.earthcraft.earth": "Real World",
+  "block.earthcraft.map_grass": "Map Grass",
+  "block.earthcraft.map_leaves": "Map Leaves",
+  "block.earthcraft.map_dirt": "Map Dirt",
+  "block.earthcraft.map_stone": "Map Stone",
+  "block.earthcraft.map_asphalt": "Map Asphalt",
+  "block.earthcraft.map_plaster": "Map Plaster",
+  "block.earthcraft.map_brick": "Map Brick",
+  "block.earthcraft.map_wood": "Map Wood",
+  "block.earthcraft.map_sand": "Map Sand"
+}

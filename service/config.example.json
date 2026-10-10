@@ -1,0 +1,7 @@
+{
+  "apiKey": "",
+  "cesiumToken": "",
+  "port": 8765,
+  "diskCache": false,
+  "water": true
+}

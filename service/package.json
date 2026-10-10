@@ -1,0 +1,28 @@
+{
+  "name": "realworldmc-service",
+  "version": "1.0.0",
+  "description": "Local map streaming and terrain generation for RealWorldMC",
+  "main": "src/server.mjs",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "start": "node src/server.mjs",
+    "mock": "node src/mock.mjs",
+    "streetview": "node src/streetview-server.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "draco3dgltf": "^1.5.7",
+    "jpeg-js": "^0.4.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

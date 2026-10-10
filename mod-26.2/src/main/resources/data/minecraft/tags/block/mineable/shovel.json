@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "earthcraft:map_grass",
+    "earthcraft:map_dirt",
+    "earthcraft:map_sand"
+  ]
+}

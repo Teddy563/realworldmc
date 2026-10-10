@@ -24,7 +24,8 @@ public final class BundledServiceChecks {
         while (photoPort==mapPort) photoPort=freePort();
         var runtime = new ServiceRuntime(mapPort, photoPort);
         try {
-            Path data = game.resolve("realworldmc-service");
+            // Exercise a launcher path with an alias even when the system temp path is canonical.
+            Path data = game.resolve(".").resolve("realworldmc-service");
             Files.createDirectories(data);
             Files.writeString(data.resolve("config.json"), "{\"apiKey\":\"\"}");
             Files.writeString(data.resolve("streetview.config.json"), "{\"tilesKey\":\"TEST_ONLY_NOT_A_REAL_KEY\"}");
@@ -45,7 +46,7 @@ public final class BundledServiceChecks {
             if (args.length > 0 && args[0].equals("release")) {
                 check(BundledService.class.getResourceAsStream("/realworldmc-service.zip") != null, "Release must bundle its service");
                 Path code = BundledService.prepare(data);
-                check(code.startsWith(data.resolve(".bundles")), "Release code must use a versioned directory");
+                check(Files.isSameFile(code.getParent(), data.resolve(".bundles")), "Release code must use a versioned directory");
                 check(!code.equals(installed), "New release installs beside the older version");
                 check(runtime.start(data, "node"), "Release must start both real services: " + runtime.error());
                 var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + photoPort + "/health")).build();

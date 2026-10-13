@@ -21,6 +21,14 @@ public class EarthConfig {
 	public String nodeExecutable = "node";
     /** Completed first-run setup; credentials live only in the local service configuration. */
     public boolean setupComplete = false;
+    /** Show RealWorldMC controls/status above map credits; vanilla and other mods are unaffected. */
+    public boolean actionBar = true;
+    /** Creative flight switches to an anchored globe view above this height over the region datum. */
+    public boolean autoSpaceFlight = true;
+    public double spaceEntryHeight = 2000;
+    public double spaceEntryHeight() {
+        return Double.isFinite(spaceEntryHeight) ? Math.clamp(spaceEntryHeight, 2000, 100000) : 2000;
+    }
 
 	/** Location used for NEW RealWorldMC worlds. Existing worlds keep the location they were created with. */
 	public boolean randomSpawn = true;

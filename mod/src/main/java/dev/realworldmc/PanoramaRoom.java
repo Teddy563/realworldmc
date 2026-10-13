@@ -100,7 +100,7 @@ public final class PanoramaRoom {
     private static JsonObject metadata(String query) throws Exception {
         ServiceClient.ensureRunning();
         if (!ServiceClient.startupError().isEmpty()) throw new IllegalStateException(ServiceClient.startupError());
-        var response = HTTP.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:8766/native/metadata?"+query)).timeout(Duration.ofSeconds(30)).GET().build(), HttpResponse.BodyHandlers.ofString());
+        var response = HTTP.send(HttpRequest.newBuilder(URI.create(ServiceClient.photoBase() + "/native/metadata?"+query)).timeout(Duration.ofSeconds(30)).GET().build(), HttpResponse.BodyHandlers.ofString());
         if(response.statusCode()==404)throw new NoPanoramaException();
         if (response.statusCode()!=200 || response.body().length()>32767) throw new IllegalStateException("Metadata unavailable");
         JsonObject data = JsonParser.parseString(response.body()).getAsJsonObject();

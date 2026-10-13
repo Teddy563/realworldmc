@@ -68,9 +68,19 @@ public final class MapRenderer {
 
 	private final Map<Integer, MapTile> loaded = new HashMap<>();
 	private final Set<Integer> loading = java.util.concurrent.ConcurrentHashMap.newKeySet();
-	private final ConcurrentLinkedQueue<TileData> uploadQueue = new ConcurrentLinkedQueue<>();
+    private record Upload(int epoch,TileData data) {}
+	private final ConcurrentLinkedQueue<Upload> uploadQueue = new ConcurrentLinkedQueue<>();
 	/** Tiles drawn this frame. */
 	private List<Integer> displayed = new ArrayList<>();
+    private record Retained(EarthRegions.Region region,List<MapTile> tiles,String credits) {}
+    private volatile Retained retained;
+    private boolean preserveLanding;
+    public void preserveForLanding() { preserveLanding=true; }
+    public void cancelLanding() { preserveLanding=false; }
+    public void finishLanding(EarthRegions.Region region) {
+        if(!java.util.Objects.equals(region,current))switchRegion(region);
+        preserveLanding=false;
+    }
 	/** A tile the service wants drawn; chain = ancestors with content, nearest first. */
 	private record Want(int id, boolean fine, int[] chain) {
 		int parent() {
@@ -102,15 +112,30 @@ public final class MapRenderer {
 	}
 
 	private void switchRegion(EarthRegions.Region region) {
+        if(!preserveLanding)releaseRetained();
+        if(preserveLanding && current!=null && region!=null && !displayed.isEmpty()) {
+            releaseRetained();
+            var tiles=new ArrayList<MapTile>();
+            synchronized(loaded) { for(int id:displayed) {var tile=loaded.remove(id);if(tile!=null)tiles.add(tile);} }
+            retained=new Retained(current,tiles,attributionText);
+        }
+
 		resetTiles();
 		current = region;
+        if(region!=null)preserveLanding=false;
 	}
 
 	/** Render thread. */
 	public void clear() {
 		regions = null;
+        releaseRetained();preserveLanding=false;
 		resetTiles();
 	}
+    private void releaseRetained() {
+        if(retained==null)return;
+        var old=retained;retained=null;
+        RenderSystem.recordRenderCall(()->old.tiles().forEach(MapTile::close));
+    }
 
 	private void resetTiles() {
 		epoch++;
@@ -118,14 +143,10 @@ public final class MapRenderer {
 		wanted = List.of();
 		displayed = new ArrayList<>();
 		uploadQueue.clear();
-		RenderSystem.recordRenderCall(() -> {
-			synchronized (loaded) {
-				for (MapTile t : loaded.values()) t.close();
-				loaded.clear();
-				lastDrawn.clear();
-			}
-		});
-		attributionText = "Google, RealWorldMC";
+        List<MapTile> old;
+        synchronized(loaded) {old=List.copyOf(loaded.values());loaded.clear();lastDrawn.clear();}
+        RenderSystem.recordRenderCall(()->old.forEach(MapTile::close));
+		attributionText = retained==null ? "Google, RealWorldMC" : retained.credits();
 		status = "";
 	}
 
@@ -136,6 +157,8 @@ public final class MapRenderer {
 	// ---------------------------------------------------------------- client tick: selection + downloads
 
 	public void tick(Minecraft mc) {
+        SpaceFlight.completeArrival(mc);
+        if(SpaceFlight.body()!=CelestialBody.EARTH)return;
 		List<EarthRegions.Region> all = regions;
 		if (all == null || mc.level == null || mc.gameRenderer == null || mc.level.dimension() != Level.OVERWORLD) return;
 		if (!status.isEmpty()) mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
@@ -145,13 +168,16 @@ public final class MapRenderer {
 		if (!java.util.Objects.equals(region, current)) switchRegion(region);
 		if (region == null) return;
 		if (++tickCounter % (mc.player!=null && (mc.player.isFallFlying() || mc.player.getAbilities().flying)?5:10) != 0 || !selecting.compareAndSet(false, true)) return;
-		Vec3 cam = camAbs.subtract(region.offsetX(), 0, region.offsetZ());
+        // Use the same interpolation time as the camera; mixing current-tick altitude with an older camera jitters selection.
+        float partial=mc.getTimer().getGameTimeDeltaPartialTick(false);
+		Vec3 cam = SpaceFlight.mapCamera(camAbs, region, partial).subtract(region.offsetX(), 0, region.offsetZ());
 		EarthRegions.Region o = region;
 		int myEpoch = epoch;
+        boolean space=SpaceFlight.anchored();
 		selector.execute(() -> {
 			try {
-				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f",
-					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z);
+				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d",
+					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0);
 				JsonObject res = ServiceClient.getJson(q, Duration.ofSeconds(30));
 				if (myEpoch != epoch) return;
 				List<Want> list = new ArrayList<>();
@@ -168,6 +194,8 @@ public final class MapRenderer {
                 if (!attr.contains("Google")) attr.add(0, "Google");
                 if (!attr.contains("RealWorldMC")) attr.add("RealWorldMC");
                 attributionText = String.join(", ", attr);
+                var prior=retained;
+                if(prior!=null && !attributionText.equals(prior.credits()))attributionText=prior.credits()+", "+attributionText;
 				Set<Integer> ids = new HashSet<>();
 				for (Want t : list) {
 					ids.add(t.id());
@@ -200,7 +228,7 @@ public final class MapRenderer {
 				if (myEpoch != epoch || !wantedIds.contains(id)) return; // flew past it already
 				byte[] bytes = ServiceClient.getBytes(String.format(Locale.ROOT, "/render/tile?%s&id=%d",
 					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), id), Duration.ofSeconds(60));
-				if (myEpoch == epoch) uploadQueue.add(TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ()));
+				if (myEpoch == epoch) uploadQueue.add(new Upload(myEpoch,TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ())));
 			} catch (Exception e) {
 				RealWorldMC.LOGGER.warn("Tile {} failed: {}", id, e.toString());
 			} finally {
@@ -213,8 +241,10 @@ public final class MapRenderer {
 
 	private void uploadAndSwitch(ClientLevel level) {
 		for (int i = 0; i < MAX_UPLOADS_PER_FRAME; i++) {
-			TileData d = uploadQueue.poll();
-			if (d == null) break;
+            Upload upload=uploadQueue.poll();
+            if(upload==null)break;
+            if(upload.epoch()!=epoch)continue;
+            TileData d=upload.data();
 			synchronized (loaded) {
 				if (!loaded.containsKey(d.id)) loaded.put(d.id, new MapTile(d, level));
 			}
@@ -232,6 +262,7 @@ public final class MapRenderer {
 			for (int i = 0; i < c.length; i++) ancestorsOf.putIfAbsent(c[i], java.util.Arrays.copyOfRange(c, i + 1, c.length));
 		}
 		LinkedHashSet<Integer> draw = new LinkedHashSet<>();
+		boolean coveredAll=!want.isEmpty();
 		synchronized (loaded) {
 			Set<Integer> covers = new HashSet<>();
 			List<Want> members = new ArrayList<>();
@@ -248,7 +279,10 @@ public final class MapRenderer {
 					}
 				}
 				if (cover != 0) covers.add(cover);
-				else for (Want w : g.getValue()) if (loaded.containsKey(w.id())) members.add(w);
+				else {
+                    if(!complete)coveredAll=false;
+                    for (Want w : g.getValue()) if (loaded.containsKey(w.id())) members.add(w);
+                }
 			}
 			for (Integer c : covers) {
 				boolean underAnother = false;
@@ -261,12 +295,15 @@ public final class MapRenderer {
 				if (!covered) draw.add(w.id());
 			}
 			frame++;
-			for (Integer id : draw) lastDrawn.put(id, frame);
-			displayed = new ArrayList<>(draw);
+            // Keep the last complete view until replacement children or coarse covers are ready.
+            // Never paint overlapping parent/child LODs, which causes depth flicker.
+            if(coveredAll || displayed.isEmpty())displayed=new ArrayList<>(draw);
+            if(coveredAll)releaseRetained();
+			for (Integer id : displayed) lastDrawn.put(id, frame);
 
 			// Keep recently drawn tiles around (turning back must not reload), evict the oldest beyond the budget.
 			if (frame % 60 == 0 && loaded.size() > want.size() * 2 + CACHE_EXTRA) {
-				Set<Integer> keep = new HashSet<>(draw);
+				Set<Integer> keep = new HashSet<>(displayed);
 				for (Want w : want) {
 					keep.add(w.id());
                     for(int i=0;i<Math.min(2,w.chain().length);i++)keep.add(w.chain()[i]);
@@ -285,6 +322,22 @@ public final class MapRenderer {
 	}
 
 	public void render(WorldRenderContext ctx) {
+        if (!SpaceView.active()) draw(ctx, false);
+    }
+
+    public void renderSpace(WorldRenderContext ctx) {
+        if (!SpaceView.active() || !active(ctx.world())) return;
+        double altitude=SpaceFlight.altitude(ctx.tickCounter().getGameTimeDeltaPartialTick(false));
+        SpaceView.sky(ctx.positionMatrix(),ctx.projectionMatrix(),SpaceFlight.body()==CelestialBody.EARTH?altitude:100_000);
+        if(SpaceFlight.body()==CelestialBody.EARTH)draw(ctx,true);
+        else PlanetRenderer.render(ctx);
+        SpaceDestinations.project(ctx);
+        // Only the distant map used the orbital projection. Restore near-world depth before entities.
+        RenderSystem.depthMask(true);
+        RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+    }
+
+	private void draw(WorldRenderContext ctx, boolean space) {
 		ClientLevel level = ctx.world();
 		if (!active(level)) return;
 		uploadAndSwitch(level);
@@ -299,6 +352,23 @@ public final class MapRenderer {
 		Frustum frustum = ctx.frustum();
 		Matrix4f proj = ctx.projectionMatrix();
 		Matrix4f view = ctx.positionMatrix();
+        if (space) {
+            float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
+            proj = SpaceView.projection(proj, SpaceFlight.altitude(partial));
+            cam = SpaceFlight.mapCamera(cam, current, partial);
+            view = new Matrix4f(view).rotate(new org.joml.Quaternionf(SpaceFlight.orbitRotation(partial)));
+            frustum = new Frustum(view, proj);
+            frustum.prepare(cam.x, cam.y, cam.z);
+        }
+        List<MapTile> tiles;
+        if(retained!=null && !space) {
+            tiles=retained.tiles();
+            cam=RegionFrame.point(cam,current,retained.region());
+            view=new Matrix4f(view).rotate(new org.joml.Quaternionf().setFromNormalized(RegionFrame.rotation(retained.region(),current)));
+            frustum=new Frustum(view,proj);frustum.prepare(cam.x,cam.y,cam.z);
+        } else {
+            tiles=new ArrayList<>();for(int id:displayed){var tile=loaded.get(id);if(tile!=null)tiles.add(tile);}
+        }
 		float partial = ctx.tickCounter().getGameTimeDeltaPartialTick(false);
 		float light = level.getSkyDarken(partial);
 
@@ -311,8 +381,7 @@ public final class MapRenderer {
 		RenderSystem.disableBlend();
 		RenderSystem.disableCull();
 
-		for (Integer id : displayed) {
-			MapTile t = loaded.get(id);
+		for (MapTile t : tiles) {
 			if (t == null || (frustum != null && !frustum.isVisible(t.bounds))) continue;
 			Matrix4f mv = new Matrix4f(view).translate(
 				(float) (t.data.anchorX - cam.x), (float) (t.data.anchorY - cam.y), (float) (t.data.anchorZ - cam.z));

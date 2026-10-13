@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 public final class SetupScreen extends Screen {
     private final Screen parent;
     private int page;
-    private boolean cesium = true, consent, busy, passed, saved;
+    private boolean cesium = true, consent, busy, passed, saved, water = true;
     private final String directory = ServiceClient.directory().toString();
     private String key = "", streetKey = "", message = "";
     private EditBox mapField, streetField;
@@ -57,6 +57,13 @@ public final class SetupScreen extends Screen {
     @Override protected void init() {
         int x = width / 2 - 150;
         if (page == 0) {
+            button("Water settings", x, 86, 300, () -> {
+                try {
+                    var config = SetupCredentials.read(Path.of(directory).resolve("config.json"));
+                    water = !config.has("water") || config.get("water").getAsBoolean();
+                    page = 3; message = ""; rebuildWidgets();
+                } catch (Exception ignored) { message = "Could not read water settings."; }
+            });
             button(consent ? "Costs understood: yes" : "I understand usage may cost money", x, height - 79, 300, () -> { consent = !consent; rebuildWidgets(); });
             button("Next: accounts", x, height - 55, 146, () -> {
                 try {
@@ -72,6 +79,15 @@ public final class SetupScreen extends Screen {
                     page = 1; message = ""; rebuildWidgets();
                 } catch (Exception ignored) { message = "Cannot read this folder or config. See the guide; files were not changed."; }
             }).active = consent;
+        } else if (page == 3 && !saved) {
+            button("OSM water generation: " + (water ? "ON" : "OFF"), x, 42, 300, () -> { water = !water; rebuildWidgets(); }).active = !busy;
+            button("Save water setting", x, height - 79, 300, () -> {
+                try {
+                    SetupCredentials.saveWater(Path.of(directory), water);
+                    saved = true; startServices(true);
+                } catch (Exception ignored) { message = "Could not save water settings."; }
+            }).active = !busy && minecraft.level == null;
+            button("Back", x, height - 55, 146, () -> { page = 0; message = ""; rebuildWidgets(); }).active = !busy;
         } else if (page == 1 && !saved) {
             button(cesium ? "Map provider: Cesium ion" : "Map provider: Google direct", x, 42, 300, () -> {
                 capture(); cesium = !cesium; key = ""; passed = false; message = ""; rebuildWidgets();
@@ -144,6 +160,9 @@ public final class SetupScreen extends Screen {
             g.drawString(font, cesium ? "Cesium token (3D Tiles asset access)" : "Google key (Map Tiles API)", x, 75, 0xFFFFFFFF);
             g.drawString(font, "Street View key (optional; Google Map Tiles API)", x, 118, 0xFFFFFFFF);
         }
+        if (page == 3 && !saved && message.isBlank()) g.drawWordWrap(font, Component.literal(
+            "Adds Minecraft water blocks using OpenStreetMap. OFF skips OSM requests. Existing chunks stay unchanged. "
+            + (minecraft.level == null ? "Failed requests time out quickly and pause before retrying." : "Return to the title screen before saving.")), x, 76, 300, 0xFFFFFFFF);
         if (!message.isBlank()) g.drawWordWrap(font, Component.literal(message), x, page == 0 ? 39 : 65, 300, passed || saved ? 0xFFA6E8B1 : 0xFFFFFFAA);
     }
 }

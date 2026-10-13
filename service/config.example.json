@@ -3,5 +3,7 @@
   "cesiumToken": "",
   "port": 8765,
   "diskCache": false,
-  "water": true
+  "water": true,
+  "waterTimeoutMs": 3000,
+  "waterCooldownMs": 60000
 }

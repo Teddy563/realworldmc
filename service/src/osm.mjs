@@ -6,6 +6,10 @@ import path from 'node:path';
 
 const CELL = 0.02; // degrees
 const memory = new Map();
+const cooldowns = new Map();
+const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_COOLDOWN_MS = 60000;
+function duration(value, fallback) { return Number.isFinite(value) && value > 0 ? value : fallback; }
 
 function cellKey(i, j) {
   return `${i}_${j}`;
@@ -46,41 +50,52 @@ function toFeatures(json) {
 }
 
 async function loadCell(cfg, i, j) {
-  const key = cellKey(i, j);
+  const cell = cellKey(i, j);
+  const endpoint = cfg.overpassUrl ?? 'https://overpass-api.de/api/interpreter';
+  const key = `${cfg.cacheDir}|${endpoint}|${cell}`;
   if (memory.has(key)) return memory.get(key);
+  let cacheResult = false;
   const p = (async () => {
-    const file = path.join(cfg.cacheDir, 'osm', `water_${key}.json`);
+    const file = path.join(cfg.cacheDir, 'osm', `water_${cell}.json`);
     try {
-      return JSON.parse(await fs.promises.readFile(file, 'utf8'));
+      const cached = JSON.parse(await fs.promises.readFile(file, 'utf8'));
+      cacheResult = true;
+      return cached;
     } catch { /* not cached */ }
+    if (Date.now() < (cooldowns.get(endpoint) ?? 0)) return [];
     const s = i * CELL, w = j * CELL;
-    let lastErr;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const res = await fetch(cfg.overpassUrl ?? 'https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'RealWorldMC/1.0.0 (Minecraft terrain service)' },
-          body: 'data=' + encodeURIComponent(query(s, w, s + CELL, w + CELL)),
-        });
-        if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
-        const features = toFeatures(await res.json());
-        await fs.promises.mkdir(path.dirname(file), { recursive: true });
-        await fs.promises.writeFile(file, JSON.stringify(features));
-        return features;
-      } catch (e) {
-        lastErr = e;
-        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
-      }
+    let features;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'RealWorldMC/1.0.1 (Minecraft terrain service)' },
+        body: 'data=' + encodeURIComponent(query(s, w, s + CELL, w + CELL)),
+        signal: AbortSignal.timeout(duration(cfg.waterTimeoutMs, DEFAULT_TIMEOUT_MS)),
+      });
+      if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
+      features = toFeatures(await res.json());
+    } catch {
+      const now = Date.now();
+      if (now >= (cooldowns.get(endpoint) ?? 0)) console.warn('[water] OSM unavailable; skipping optional water during cooldown.');
+      cooldowns.set(endpoint, now + duration(cfg.waterCooldownMs, DEFAULT_COOLDOWN_MS));
+      return [];
     }
-    throw lastErr;
+    cacheResult = true;
+    // A disk-cache failure must not discard valid water or mark the provider unavailable.
+    try {
+      await fs.promises.mkdir(path.dirname(file), { recursive: true });
+      await fs.promises.writeFile(file, JSON.stringify(features));
+    } catch { /* keep the successful in-memory result */ }
+    return features;
   })();
   memory.set(key, p);
-  p.catch(() => memory.delete(key));
-  return p;
+  try { return await p; }
+  finally { if (!cacheResult) memory.delete(key); }
 }
 
 /** Water features overlapping a lat/lon box (deduplicated across cells). */
 export async function waterFeatures(cfg, south, west, north, east) {
+  if (cfg.water === false) return [];
   const cells = [];
   for (let i = Math.floor(south / CELL); i <= Math.floor(north / CELL); i++) {
     for (let j = Math.floor(west / CELL); j <= Math.floor(east / CELL); j++) cells.push(loadCell(cfg, i, j));

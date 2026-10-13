@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.1 (2026-10-14)
+
+- Hide the launch world's terrain, mobs, block entities, particles and border effects during orbit. Prevent targeting invisible Earth objects; restore the ordinary view on return without deleting world contents.
+- Automatically enter space above a configurable 2 km ground-reference height, with a lower exit threshold. Anchor both vertical and horizontal globe movement, smooth acceleration, and retain/reframe scenery during terrain swaps to reduce flicker.
+- Add experimental `/earth space` flight on 1.21.1: Space/Shift change altitude, W/S cruise around the globe, and `/earth space return` restores the launch point.
+- Preserve camera zoom and third-person offsets. Keep Steve visible during fast movement and animate movement-driven ascent, descent and one-arm-leading cruise without requiring an elytra. Looking around no longer tilts a vertical climb.
+- Fade from atmosphere to a black star field between 12 and 80 km. Use an isolated Iris pipeline in orbit, remove local clouds/precipitation there, and preserve the selected Earth shader pack. Light the orbital player consistently.
+- Accelerate ascent and globe travel with altitude; reach the full Earth view in under 70 seconds at 20 TPS from the default entry height.
+- Add `/rw moon`, `/rw mars` and `/rw earth`, plus aim-and-hold travel markers. Moon and Mars are orbital flyovers using bundled NASA/LROC and Viking maps, with source credits. They do not provide terrain blocks or landings.
+- Allow descent below the launch height. When returning from orbit, prepare the geographic region below the player and resume local Creative flight. Keep the globe viewpoint above the WGS84 ellipsoid across latitudes.
+- Move RW status and control hints above the bottom-left credits. `/earth actionbar` toggles them without replacing other mods' action bars. Enlarge native Street View arrows and browser preview navigation buttons.
+- Add a setup toggle for optional OSM water generation, bounded requests and failure cooldowns. Retry local-service startup on alternative ports when the defaults are occupied.
+- Record the unresolved blank Earth return view with Bliss in offline tests; orbital checks do not certify every shader combination.
+- Match the two build versions and service metadata to 1.0.1 for the existing tag workflow. Native space flight remains exclusive to 1.21.1; the 26.2 build remains experimental.
+
+See the [1.0.1 release notes](docs/releases/v1.0.1.md) and [validation results and limitations](docs/release-1.0.1.md).
+
+## Development history before v1.0.0
+
 ### Random new-world starts (2026-10-11)
 
 - Choose each new Real World origin uniformly from 100 curated places, including the Palace of Parliament. Save that coordinate pair with the generator; reloading, death and dimension travel never reroll it.

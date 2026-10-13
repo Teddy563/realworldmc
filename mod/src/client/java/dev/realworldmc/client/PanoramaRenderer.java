@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import dev.realworldmc.RealWorldMC;
+import dev.realworldmc.ServiceClient;
 import dev.realworldmc.PanoramaRoom;
 import dev.realworldmc.PanoramaPayload;
 import dev.realworldmc.PanoramaActionPayload;
@@ -131,7 +132,7 @@ public final class PanoramaRenderer {
         walkingRequested=true;action(ticket,"walk",enabled?"on":"off");
     }
     private static byte[] fetch(String path) throws Exception {
-        var r=HTTP.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:8766/native/"+path)).timeout(Duration.ofSeconds(90)).GET().build(),HttpResponse.BodyHandlers.ofByteArray());
+        var r=HTTP.send(HttpRequest.newBuilder(URI.create(ServiceClient.photoBase() + "/native/"+path)).timeout(Duration.ofSeconds(90)).GET().build(),HttpResponse.BodyHandlers.ofByteArray());
         if(r.statusCode()!=200 || r.body().length>20_000_000)throw new IllegalStateException("Street View unavailable");return r.body();
     }
     private void load(JsonObject data,int request){
@@ -253,15 +254,13 @@ public final class PanoramaRenderer {
         String[] glyph={"0001000","0011100","0111110","1101011","1001001","0001000","0001000"};
         for(int i=0;i<directions.length;i++){
             double angle=Math.toRadians(directions[i]-heading),sin=Math.sin(angle),cos=Math.cos(angle);
-            int ax=cx+(int)Math.round(sin*49),ay=cy-(int)Math.round(cos*20);
+            int ax=cx+(int)Math.round(sin*62),ay=cy-(int)Math.round(cos*25);
             int color=loading?0x55ffffff:i==selected?0xccffdd35:0x88ffffff;
             for(int y=0;y<glyph.length;y++)for(int x=0;x<glyph[y].length();x++)if(glyph[y].charAt(x)=='1'){
-                double dx=(x-3)*2,dy=(y-3)*2;int px=ax+(int)Math.round(dx*cos-dy*sin),py=ay+(int)Math.round(dx*sin+dy*cos);
-                g.fill(px+1,py+1,px+3,py+3,0x55000000);g.fill(px,py,px+2,py+2,color);
+                double dx=(x-3)*3,dy=(y-3)*3;int px=ax+(int)Math.round(dx*cos-dy*sin),py=ay+(int)Math.round(dx*sin+dy*cos);
+                g.fill(px+1,py+1,px+4,py+4,0x66000000);g.fill(px,py,px+3,py+3,color);
             }
         }
-        String hint=loading?"Loading…":walking?"WASD: nearby walk • Arrows: travel • V: recenter • /earth back":"W / arrows: travel • V: nearby walk • F5: third person • /earth back";
-        g.drawCenteredString(mc.font,hint,cx,g.guiHeight()-112,0xffeeeeee);
     }
     public void hud(GuiGraphics g){
         if(!active())return;Minecraft mc=Minecraft.getInstance();int w=g.guiWidth(),h=g.guiHeight();
@@ -279,5 +278,9 @@ public final class PanoramaRenderer {
             for(var line:lines){g.drawString(mc.font,line,7,top,0xffeeeeee,true);top+=10;}
         }
         if(!mc.options.hideGui && mc.screen==null)arrows(g);
+        if(!sourcesVisible)ActionBar.render(g,h-40,java.util.List.of(
+            walking?"WASD: walk · Arrows: travel":ActionBar.key(mc.options.keyUp)+" / Arrows: travel",
+            ActionBar.key(walkKey)+(walking?": recenter":": nearby walk")+" · "+ActionBar.key(mc.options.keyTogglePerspective)+": camera",
+            "/earth back: return"));
     }
 }

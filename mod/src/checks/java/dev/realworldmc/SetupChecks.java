@@ -40,6 +40,15 @@ public final class SetupChecks {
             SetupCredentials.save(dir, false, "google", "");
             check(SetupCredentials.read(dir.resolve("config.json")).get("cesiumToken").getAsString().isEmpty());
             check(SetupCredentials.read(dir.resolve("streetview.config.json")).get("tilesKey").getAsString().isEmpty());
+            var beforeWater = SetupCredentials.read(dir.resolve("config.json"));
+            String photoBefore = Files.readString(dir.resolve("streetview.config.json"));
+            SetupCredentials.saveWater(dir, false);
+            var afterWater = SetupCredentials.read(dir.resolve("config.json"));
+            check(!afterWater.get("water").getAsBoolean());
+            afterWater.remove("water"); check(afterWater.equals(beforeWater));
+            check(Files.readString(dir.resolve("streetview.config.json")).equals(photoBefore));
+            SetupCredentials.saveWater(dir, true);
+            check(SetupCredentials.read(dir.resolve("config.json")).get("water").getAsBoolean());
             Files.writeString(dir.resolve("config.json"), "broken");
             try { SetupCredentials.save(dir, true, "new", "new"); throw new AssertionError("Malformed config accepted"); } catch (com.google.gson.JsonParseException | IllegalStateException expected) { check(Files.readString(dir.resolve("config.json")).equals("broken")); }
         } finally { try (var paths = Files.walk(dir)) { for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) Files.delete(path); } }

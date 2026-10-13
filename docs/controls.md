@@ -44,9 +44,19 @@ Your rebound camera toggle also works. Entering or leaving Street View preserves
 
 `/earth help` shows the main commands. Click a yellow command to fill chat, then enter its arguments. `/earth help more` shows extra options.
 
-Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. Street View photo loading appears above the hotbar, including the first photo before you enter the photo world. Loading updates do not fill chat.
+Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. In the prepared 1.0.1 build, photo loading and short control hints appear in stacked lines above the bottom-left map credits. The larger white arrows turn yellow when selected. Loading updates do not fill chat.
+
+`/earth actionbar` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
 
 Street View uses fixed daylight and softly shaded blocks. Lighting in a 360-degree photograph cannot react to placed torches or match every shadow exactly. The photo dimension uses a vanilla Iris pipeline; Earth exploration keeps your chosen shaders.
+
+## Experimental space filming
+
+The local experimental 1.21.1 build also has [Earth-to-space filming controls](space-flight.md). They are not in the published v1.0.0 download.
+
+In Creative singleplayer, fly above 2 km over your region's ground reference to enter automatically. Space/Shift change altitude; W/S cruise and A/D strafe. Descend below 1.6 km to resume local flight. `/earth space` starts ascent earlier; `/earth space return` goes back to the entry point. The threshold uses the region's saved ground height, not a live terrain measurement under the player.
+
+The prepared 1.0.1 build also accepts `/rw moon`, `/rw mars` and `/rw earth` for orbital flyovers and return to Earth orbit. The `/earth` prefix works too. Above 100 km, aim at a destination marker and hold W for 2.5 seconds to travel. Release W or look away to cancel. See [space flight](space-flight.md) for imagery limits and [planetary data](planetary-data.md) for sources.
 
 ## New-world starting place
 

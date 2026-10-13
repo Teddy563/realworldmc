@@ -7,7 +7,6 @@ Use actual Minecraft 1.21.1 footage. Keep provider credits in the game capture. 
 - [Static gameplay grid](assets/gameplay-grid.jpg): one 1920×1080 JPG showing New York, Grand Canyon, Paris and Golden Gate Bridge. Golden Gate replaces the former bottom-right Barcelona panel. No GIF or alternate grids are published.
 - The collage uses real footage in a 2×2 grid. Inventory, FPS text and black borders are cropped away. Provider credits remain inside each panel as softer text, without dark boxes or a repeated RealWorldMC label.
 - [Flight preview](assets/flight-preview.mp4): about 14 seconds, 1280×720, 30 fps, silent H.264 with fast-start playback. Four scenes with short crossfades. The captures use optional shaders; this is development footage, not a promise of identical graphics on every installation.
-- [Green explorer](assets/explorer-green.webp) and [blue download helper](assets/explorer-blue.webp): existing RealWorldMC mascot artwork, sized for the README.
 
 The README links to the MP4 rather than depending on an autoplaying video embed. Use the static JPG as the repository's main preview and the MP4 as a release attachment or demo link. Keep full-resolution recordings outside Git. The committed media is small enough to review alongside source changes.
 

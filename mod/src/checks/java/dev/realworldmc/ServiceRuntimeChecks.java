@@ -31,6 +31,14 @@ public final class ServiceRuntimeChecks {
             check(!second.start(dir, "node"), "Another game must not adopt this game's child");
             second.stop();
             check(runtime.start(dir, "node"), "Stopping a non-owner must not stop our child");
+            var fallback = new ServiceRuntime(map, photo, true);
+            try {
+                check(fallback.start(dir, "node"), "Occupied defaults must select free ports: " + fallback.error());
+                check(fallback.mapPort() != map && fallback.photoPort() != photo && fallback.mapPort() != fallback.photoPort(), "Fallback ports must be distinct and avoid occupied services");
+                check(runtime.start(dir, "node"), "Fallback must leave the original service healthy");
+                check(fallback.start(dir, "node"), "Fallback must reuse its own child");
+            } finally { fallback.stop(); }
+            check(runtime.start(dir, "node"), "Fallback shutdown must not stop original service");
             runtime.stop();
             check(second.start(dir, "node"), "Ports must be released after game shutdown: " + second.error());
             second.stop();

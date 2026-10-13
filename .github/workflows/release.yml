@@ -88,6 +88,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: downloads
@@ -102,5 +103,11 @@ jobs:
           set -euo pipefail
           args=()
           if [[ "$RELEASE_TAG" == *-* ]]; then args+=(--prerelease); fi
-          gh release create "$RELEASE_TAG" downloads/* --verify-tag --draft --title "RealWorldMC $RELEASE_TAG" --generate-notes "${args[@]}"
+          notes="docs/releases/$RELEASE_TAG.md"
+          if [[ -f "$notes" ]]; then
+            args+=(--notes-file "$notes")
+          else
+            args+=(--generate-notes)
+          fi
+          gh release create "$RELEASE_TAG" downloads/* --verify-tag --draft --title "RealWorldMC $RELEASE_TAG" "${args[@]}"
           gh release edit "$RELEASE_TAG" --draft=false

@@ -14,6 +14,9 @@ public class RealWorldMCClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
         SetupScreen.register();
+        SpaceFlight.register();
+        ClientTickEvents.END_CLIENT_TICK.register(SpaceDestinations::tick);
+        ActionBar.register();
 		MapRenderer renderer = MapRenderer.INSTANCE;
         PanoramaRenderer panorama=PanoramaRenderer.INSTANCE;
         panorama.registerKeys();
@@ -34,6 +37,7 @@ public class RealWorldMCClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(renderer::tick);
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> renderer.onChunkLoaded(chunk.getPos()));
 		WorldRenderEvents.AFTER_ENTITIES.register(renderer::render);
+        WorldRenderEvents.BEFORE_ENTITIES.register(renderer::renderSpace);
 
 		HudRenderCallback.EVENT.register((graphics, delta) -> {
 			Minecraft mc = Minecraft.getInstance();
@@ -41,9 +45,11 @@ public class RealWorldMCClient implements ClientModInitializer {
 			var font = mc.font;
 			int h = graphics.guiHeight();
 			// Attribution required by the Google Map Tiles API terms.
-			String attr = renderer.attributionText;
+			String attr = SpaceFlight.body()==CelestialBody.EARTH ? renderer.attributionText : SpaceFlight.body().credits;
 			int color = dev.realworldmc.CreditFade.HUD.color(mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen);
 			graphics.drawString(font, attr, 4, h - 12, color, true);
+            ActionBar.render(graphics,h-25,ActionBar.flightControls());
+            SpaceDestinations.hud(graphics);
 		});
 	}
 }

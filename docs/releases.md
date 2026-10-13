@@ -21,9 +21,9 @@ Review the [manual checklist](../RELEASE-CHECKLIST.md). Commit source and the sm
 The workflow is local until committed and pushed. Pushing `main` verifies the build first. A later version tag is the step that publishes the release, so do not tag until the in-game checks are complete.
 
 1. Update `version` in both Gradle projects, the changelog and service package version.
-2. Commit the tested source, including `.github/workflows/release.yml`.
+2. Put the approved notes in `docs/releases/<tag>.md`, for example `docs/releases/v1.0.1.md`, then commit the tested source, including `.github/workflows/release.yml`.
 3. Push a matching tag, for example `v1.0.1`. Tags with a suffix such as `v1.0.1-rc.1` publish a prerelease.
-4. Wait for both builds. The workflow uploads all files to a draft, then publishes it.
+4. Wait for both builds. The workflow uploads all files to a draft with the approved notes, then publishes it. If no notes file exists, it generates notes from Git history.
 5. Open the website's Download Mod dialog and check the stable JAR, pack alternative and collapsed experimental option.
 
 Do not reuse an existing release tag; fix and release a new version.

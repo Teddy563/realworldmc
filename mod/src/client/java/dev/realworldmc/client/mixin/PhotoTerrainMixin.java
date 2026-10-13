@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class PhotoTerrainMixin {
     @WrapMethod(method="renderSectionLayer")
     private void realworldmc$photoDepth(RenderType layer,double x,double y,double z,Matrix4f view,Matrix4f projection,Operation<Void> original){
+        if(dev.realworldmc.client.SpaceView.active())return;
         if(!PanoramaRenderer.INSTANCE.active()){original.call(layer,x,y,z,view,projection);return;}
         try(MemoryStack stack=MemoryStack.stackPush()){
             var mask=stack.malloc(4);GL11.glGetBooleanv(GL11.GL_COLOR_WRITEMASK,mask);

@@ -40,15 +40,19 @@ public final class ServiceClient {
 	}
 
 	public static String base() {
-		return EarthConfig.get().serviceUrl.replaceAll("/+$", "");
+        String configured = configuredBase();
+        return configured.equals("http://127.0.0.1:8765") ? "http://127.0.0.1:" + RUNTIME.mapPort() : configured;
 	}
+
+    private static String configuredBase() { return EarthConfig.get().serviceUrl.replaceAll("/+$", ""); }
+    public static String photoBase() { return "http://127.0.0.1:" + RUNTIME.photoPort(); }
 
 	public static String originQuery(double lat, double lon, double h) {
 		return String.format(Locale.ROOT, "lat=%.8f&lon=%.8f&h=%.4f", lat, lon, h);
 	}
 
 	public static byte[] getBytes(String pathAndQuery, Duration timeout) throws IOException, InterruptedException {
-        if (base().equals("http://127.0.0.1:8765") && !startupError().isEmpty()) throw new IOException(startupError());
+        if (configuredBase().equals("http://127.0.0.1:8765") && !startupError().isEmpty()) throw new IOException(startupError());
 		HttpRequest req = HttpRequest.newBuilder(URI.create(base() + pathAndQuery)).timeout(timeout).GET().build();
 		HttpResponse<byte[]> res = HTTP.send(req, HttpResponse.BodyHandlers.ofByteArray());
 		if (res.statusCode() != 200) {
@@ -75,7 +79,7 @@ public final class ServiceClient {
     public static String startupError() { return RUNTIME.error(); }
     /** Called on a worker thread, never from the render thread. */
     public static void ensureRunning() {
-        if (!base().equals("http://127.0.0.1:8765")) return; // Explicit remote service stays externally managed.
+        if (!configuredBase().equals("http://127.0.0.1:8765")) return; // Explicit remote service stays externally managed.
         var config = EarthConfig.get();
         boolean bundled = config.serviceDir == null || config.serviceDir.isBlank() || config.serviceDir.equals("realworldmc-service");
         RUNTIME.start(directory(), config.nodeExecutable, bundled);

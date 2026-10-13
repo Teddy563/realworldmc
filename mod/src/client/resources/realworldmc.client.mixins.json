@@ -9,7 +9,13 @@
     "PhotoTerrainMixin",
     "PhotoColorMaskMixin",
     "PhotoCameraMixin",
-    "PhotoIrisMixin"
+    "PhotoIrisMixin",
+    "FlightVisibilityMixin",
+    "SpacePoseMixin",
+    "SpaceModelMixin",
+    "SpaceWeatherMixin",
+    "ActionBarMixin",
+    "OrbitalWorldEffectsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

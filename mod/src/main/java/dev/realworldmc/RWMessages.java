@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 /** Shared chat/action-bar style. Provider errors must never include raw URLs or credentials. */
 public final class RWMessages {
     public static final int GREEN = 0x55C98B;
-    private static final Pattern COMMAND = Pattern.compile("/(?:earth|rw)(?: (?:help|setup|goto|where|back|setlocation|streetview)(?: (?:here|browser|setup|legacy|height|back|exit))?)?\\b");
+    private static final Pattern COMMAND = Pattern.compile("/(?:earth|rw)(?: (?:help|setup|goto|where|back|setlocation|streetview|space|actionbar)(?: (?:here|browser|setup|legacy|height|back|exit|on|off|return))?)?\\b");
     private RWMessages() {}
 
     public static MutableComponent prefix() {

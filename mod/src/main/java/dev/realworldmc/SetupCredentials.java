@@ -96,6 +96,14 @@ public final class SetupCredentials {
         }
         return new SaveResult(!map.equals(previousMap), !street.equals(previousStreet));
     }
+    /** Optional terrain setting; does not change provider credentials. */
+    public static void saveWater(Path directory, boolean enabled) throws Exception {
+        Files.createDirectories(directory);
+        Path file = directory.resolve("config.json");
+        var config = read(file);
+        config.addProperty("water", enabled);
+        write(file, JSON.toJson(config));
+    }
     private static void write(Path file, String text) throws Exception {
         Path temp = Files.createTempFile(file.getParent(), ".rwmc-setup-", ".tmp");
         try {

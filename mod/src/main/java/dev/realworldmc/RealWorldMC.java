@@ -93,6 +93,16 @@ public class RealWorldMC implements ModInitializer {
                     return 1;
                 }))
                 .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
+                .then(Commands.literal("moon").executes(ctx -> spaceHelp(ctx.getSource())))
+                .then(Commands.literal("mars").executes(ctx -> spaceHelp(ctx.getSource())))
+                .then(Commands.literal("earth").executes(ctx -> spaceHelp(ctx.getSource())))
+                .then(Commands.literal("actionbar").executes(ctx -> actionBarHelp(ctx.getSource()))
+                    .then(Commands.literal("on").executes(ctx -> actionBarHelp(ctx.getSource())))
+                    .then(Commands.literal("off").executes(ctx -> actionBarHelp(ctx.getSource()))))
+                .then(Commands.literal("space").executes(ctx -> spaceHelp(ctx.getSource()))
+                    .then(Commands.literal("on").executes(ctx -> spaceHelp(ctx.getSource())))
+                    .then(Commands.literal("off").executes(ctx -> spaceHelp(ctx.getSource())))
+                    .then(Commands.literal("return").executes(ctx -> spaceHelp(ctx.getSource()))))
                 .then(Commands.literal("streetview")
                     .executes(ctx -> streetView(ctx.getSource(), ""))
                     .then(Commands.literal("here").executes(ctx -> streetView(ctx.getSource(), "")))
@@ -138,9 +148,24 @@ public class RealWorldMC implements ModInitializer {
 	}
 
 
+    private static int spaceHelp(CommandSourceStack src) {
+        src.sendSuccess(() -> RWMessages.message("Creative flight enters space automatically above 2 km by default. /earth space starts early. W/S cruise, A/D strafe, mouse steers, Space/Shift rise and descend. /earth space return goes back; /earth actionbar toggles information."), false);
+        return 1;
+    }
+
+    private static int actionBarHelp(CommandSourceStack src) {
+        src.sendSuccess(() -> RWMessages.message("The updated client toggles its information with /earth actionbar, /earth actionbar on or /earth actionbar off."), false);
+        return 1;
+    }
+
     private static int help(CommandSourceStack src) {
         var help = RWMessages.message("RealWorldMC · click a command to fill chat")
             .append(RWMessages.helpLine("/earth setup", "Add or test your API keys"))
+            .append(RWMessages.helpLine("/earth space", "Experimental Earth-to-space filming flight"))
+            .append(RWMessages.helpLine("/rw moon", "Moon orbital flyover using NASA imagery"))
+            .append(RWMessages.helpLine("/rw mars", "Mars orbital flyover using Viking imagery"))
+            .append(RWMessages.helpLine("/rw earth", "Return to your previous Earth orbit"))
+            .append(RWMessages.helpLine("/earth actionbar", "Show or hide the bottom-left controls and status"))
             .append(RWMessages.helpLine("/earth goto <place or lat, lon>", "Travel to a real place"))
             .append(RWMessages.helpLine("/earth where", "Your coordinates and map link"))
             .append(RWMessages.helpLine("/earth streetview", "Nearest photo within 500 metres"))
@@ -198,7 +223,7 @@ public class RealWorldMC implements ModInitializer {
     }
 
     private static int streetViewBrowser(CommandSourceStack src) {
-        final String link = "http://127.0.0.1:8766/";
+        final String link = ServiceClient.photoBase() + "/";
         src.sendSuccess(() -> RWMessages.message("Street photos: ").append(
             Component.literal("[Open 360-degree viewer]").withStyle(s -> s.withColor(ChatFormatting.AQUA)
                 .withUnderlined(true).withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.OPEN_URL, link))))

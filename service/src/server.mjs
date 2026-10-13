@@ -17,6 +17,7 @@ import { waterFeatures } from './osm.mjs';
 import { TileClient } from './tiles.mjs';
 import { collectRegionTiles, selectRenderTiles, isFine, contentParent, contentChain } from './select.mjs';
 import { voxelizeArea, mcPositions } from './voxel.mjs';
+import { spaceRenderOptions, spaceAltitude } from './space-view.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serviceDir = path.resolve(process.env.RWMC_DATA_DIR ?? path.resolve(here, '..'));
@@ -163,8 +164,8 @@ export class EarthService {
     return out;
   }
 
-  async renderSelect(frame, cam) {
-    const r = this.cfg.render;
+  async renderSelect(frame, cam, space = false) {
+    const r = space ? spaceRenderOptions(this.cfg.render, spaceAltitude(frame, cam)) : this.cfg.render;
     const sseFactor = r.viewportHeight / (2 * Math.tan((r.fovDeg * Math.PI) / 360));
     const { tiles, pending } = await selectRenderTiles(this.client, frame, cam, {
       maxSse: r.maxSse, sseFactor, far: r.far, fineRadius: r.fineRadius, targetError: this.cfg.collisionError,
@@ -310,7 +311,7 @@ export function createServer(service) {
         }
         case '/render/select': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));
-          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')]));
+          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')], q.get('space') === '1'));
         }
         case '/render/tile': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));

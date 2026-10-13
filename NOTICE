@@ -7,3 +7,12 @@ See LICENSE for the full terms and CHANGELOG.md for changes.
 
 Map imagery, provider data, Minecraft assets, third-party dependencies and
 separately licensed artwork retain their own licenses and terms.
+
+Moon orbital imagery: NASA Scientific Visualization Studio / LROC WAC,
+NASA/GSFC/Arizona State University; visualization by Ernie Wright.
+Source: https://svs.gsfc.nasa.gov/4720/
+Mars orbital imagery: NASA/JPL-Caltech/USGS Viking mosaic.
+Source: https://maps.jpl.nasa.gov/tmaps/mars.html
+Use terms: https://www.jpl.nasa.gov/jpl-image-use-policy/
+These images are not covered by the RealWorldMC code license. Their inclusion
+does not imply endorsement. See docs/planetary-data.md for dataset details.

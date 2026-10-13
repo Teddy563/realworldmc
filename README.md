@@ -1,70 +1,94 @@
 # RealWorldMC: real-world maps in Minecraft
 
-<img src="docs/assets/explorer-green.webp" align="right" width="104" alt="RealWorldMC explorer mascot">
+Explore real cities, fly over mountains and step into Google Maps Street View inside Minecraft Java. RealWorldMC streams Google Photorealistic 3D Tiles and places Minecraft blocks and mobs alongside street-level photos. It offers Google Earth-style exploration without running the Google Earth application.
 
-RealWorldMC is a Minecraft Java mod for exploring real cities and terrain with Google Photorealistic 3D Tiles and Google Maps Street View. Fly over mountains with an elytra or visit street-level photos with Minecraft blocks and mobs around you. It offers Google Earth-style exploration inside Minecraft; it does not run the Google Earth application.
-
-[Download the latest release](https://github.com/Teddy563/realworldmc/releases/latest) · [Setup](docs/setup.md) · [API keys and costs](docs/accounts-and-costs.md)
+[Download the latest published release](https://github.com/Teddy563/realworldmc/releases/latest) · [Website](https://realworldmc.com/) · [Setup](docs/setup.md) · [API keys and costs](docs/accounts-and-costs.md)
 
 ![RealWorldMC gameplay: New York, the Grand Canyon, Paris and the Golden Gate Bridge in a two-by-two grid](docs/assets/gameplay-grid.jpg)
 
-Actual Minecraft 1.21.1 footage with optional shaders. Provider credits remain visible. Mascots are brand artwork, not in-game characters.
+Actual Minecraft 1.21.1 footage with optional shaders. Provider credits remain visible.
 
-[Watch the 14-second flight preview](docs/assets/flight-preview.mp4) · [Media details and capture checklist](docs/media.md)
+[Watch the 14-second flight preview](docs/assets/flight-preview.mp4) · [Screenshots and recording guide](docs/media.md)
 
-**Use Minecraft Java 1.21.1 for in-game Street View.** The separate 26.2 build is experimental and has browser Street View only. Both need a local map service, internet access, and your own provider credentials.
+**Recommended: Minecraft Java 1.21.1 with Fabric.** It supports in-game Street View and the masked key setup screen. The separate 26.2 build is experimental and has browser Street View only. Both need internet access and your own provider credentials.
 
-## Start here
+## What is new in 1.0.1?
 
-<img src="docs/assets/explorer-blue.webp" align="right" width="144" alt="Blue RealWorldMC explorer holding a laptop">
+[Read the 1.0.1 release notes](docs/releases/v1.0.1.md).
 
-1. Use **Minecraft Java 1.21.1**, **Fabric**, **Fabric API for 1.21.1**, and **Java 21** on Windows x64.
-2. Download **`RealWorldMC-VERSION-mc1.21.1.jar`** from Releases and put it in your profile's `mods` folder. Keep only one RealWorldMC JAR installed. The release JAR includes the local map service and a private Node runtime.
-3. Launch Minecraft. In **RealWorldMC setup**, choose Google direct or Cesium, enter your own credentials, and test access. Street View uses an optional separate Google Map Tiles key.
-4. **Save & finish** starts or reloads local services automatically. Create a Creative world with commands and the **Real World** world type. If you changed keys inside a world, reopen that world to refresh map connections.
-5. New worlds pick one of **100 curated starting places** at random, including the Palace of Parliament in Bucharest. The chosen location stays saved with that world. [See all 100 starts](docs/spawn-locations.md). Use `/earth setup` to reopen setup and [controls](docs/controls.md) to travel.
+- **Earth to orbit:** in a Creative, singleplayer Real World world, fly above the default 2 km entry height or run `/earth space`. Use Space to climb, Shift to descend and WASD to travel. No elytra is required.
+- **Moon and Mars flyovers:** visit image-covered globes with `/earth moon` and `/earth mars`. Use `/earth earth` to return to Earth orbit. These destinations do not have walkable surfaces.
+- **Steadier filming:** smoother globe motion, retained scenery during tile changes and better third-person player visibility. Earth blocks and mobs are hidden during orbit without being deleted.
+- **Clearer controls:** compact bottom-left hints, `/earth actionbar` to hide them and larger Street View arrows.
+- **Loading fixes:** optional OpenStreetMap water generation has a setup toggle and bounded requests. Local services try alternative ports when their usual ports are busy.
 
-**Prefer a ready-made profile?** Import the **1.21.1 Core `.mrpack`** into Modrinth App or Prism Launcher. It sets up Fabric and the mod dependencies. Do not install both copies into one profile.
+Space flight is experimental and currently available only in the 1.21.1 build. Read the [space guide](docs/space-flight.md) and [1.0.1 validation notes](docs/release-1.0.1.md) before testing.
 
-No PowerShell, batch files, or separate Node installation is needed on **Windows x64**. This is a **Fabric** mod, not Forge/NeoForge or Bedrock. The experimental 26.2 download needs Java 25 and manual key configuration. See [setup](docs/setup.md).
+## Install and start
 
-## Useful commands for 1.21.1
+1. Use **Windows x64**, **Minecraft Java 1.21.1**, **Fabric**, **Fabric API for 1.21.1** and **Java 21**.
+2. Download **`RealWorldMC-VERSION-mc1.21.1.jar`** from [Releases](https://github.com/Teddy563/realworldmc/releases). Put it in your profile's `mods` folder and keep only one RealWorldMC JAR. The release JAR includes the local map service and its private Node runtime.
+3. Launch Minecraft. In **RealWorldMC setup**, choose Google direct or Cesium, enter your credentials in the masked fields and test access. Native Street View needs a Google Map Tiles API key. Follow [accounts and costs](docs/accounts-and-costs.md) to set these up.
+4. Select **Save & finish**. The mod starts the local services automatically. Create a Creative world with commands enabled and choose the **Real World** world type.
+5. Wait for the scenery to load. Each new world starts at one of [100 curated places](docs/spawn-locations.md), including the Palace of Parliament in Bucharest. That world's starting location stays saved.
+
+**Prefer a ready-made profile?** Import the **1.21.1 Core `.mrpack`** from Releases into Modrinth App or Prism Launcher. It sets up Fabric and the mod dependencies. Do not add a second copy of the mod to that profile.
+
+No batch files, PowerShell scripts or separate Node installation are needed for the Windows x64 release. Other platforms need manual setup and further testing. This is a Fabric mod for Java Edition; it does not support Forge, NeoForge or Bedrock. The experimental 26.2 build needs Java 25 and manual key configuration. See [setup](docs/setup.md).
+
+## Everyday commands
 
 | Command | What it does |
 |---|---|
 | `/earth help` | Show help |
+| `/earth setup` | Open the masked key setup screen |
 | `/earth goto 44.427454, 26.087287` | Visit the Palace of Parliament |
 | `/earth where` | Show your coordinates |
-| `/earth streetview` | Find the nearest photo to your current Earth position |
+| `/earth streetview` | Find the nearest photo to your Earth position |
 | `/earth back` | Return from Street View |
 
-**F5** cycles camera views in exploration and Street View. In Street View, tap **W** toward a yellow arrow to travel. Press **V** to walk within a 3×3 block area.
+**F5** cycles camera views in exploration and Street View. In Street View, tap **W** toward a yellow arrow to travel. Press **V** to walk within a 3×3 block area. `/rw` is an equivalent command prefix. See [all controls](docs/controls.md).
 
-Minecraft 1.21.1 supports `/earth setup` to reopen the masked key setup screen, plus `/rw` as an equivalent shortcut for commands. See [command updates](docs/rw-commands.md).
+### Space commands in 1.0.1
+
+| Command | What it does |
+|---|---|
+| `/earth space` | Start powered ascent in Creative singleplayer |
+| `/earth space return` | Return to the original launch point |
+| `/earth moon` | Visit the Moon flyover |
+| `/earth mars` | Visit the Mars flyover |
+| `/earth earth` | Restore your Earth orbit |
+| `/earth actionbar` | Toggle the bottom-left controls and status |
+
+On Earth, descending below the default 1.6 km exit height prepares the geographic location below you and returns to ordinary Creative flight. Loading may pause while that place is prepared. The entry height uses the region's saved ground reference, not the ground directly below every frame.
+
+## Updating
+
+Back up your worlds, close Minecraft and replace the old RealWorldMC JAR with the new release JAR. Keep one copy installed. Your saved worlds, API keys and profile controls stay in their existing files. Use `/earth setup` to change keys; save and reopen the world to refresh map connections.
 
 ## Know before playing
 
-- Maps load over the internet. Some places have missing or outdated coverage; provider usage may cost money.
-- Blocks approximate the scenery. Photos do not contain real building interiors or accurate wall depth.
-- Street View shows the photo over untouched terrain. Placed blocks and excavated surfaces use Minecraft textures. Photo alignment and third person are approximate.
+- Maps load over the internet. Coverage and detail vary, and provider usage may cost money. [Read the API limits and costs](docs/accounts-and-costs.md) before adding keys.
+- Blocks approximate the scenery. Street View photos do not contain building interiors or accurate wall depth. Placed blocks and excavated surfaces use Minecraft textures; photo alignment and third person remain approximate.
 - This is an exploration and building mod, not a complete survival world generator.
-- Existing saves keep their starting coordinates and terrain. Back up saves before updating.
-- Builds and automated checks pass. Full gameplay, shader combinations, and the 26.2 port still need testing.
+- Space mode moves the geographic view while keeping the physical player near the launch point. It is for filming, not gameplay across a block-built planet. Moon and Mars use bundled imagery, without terrain blocks, landings or additional imagery API requests.
+- The 1.0.1 build passed build, service and isolated gameplay/rendering checks. Those do not certify every shader or add-on. **Bliss showed a blank Earth return view in an offline test with both the previous and current JAR; that issue remains unresolved.**
+- Native space flight is not included in the experimental 26.2 module. Its build checks pass, but full gameplay testing remains outstanding.
 
-Read [Limitations](docs/limitations.md) or [Troubleshooting and updates](docs/troubleshooting.md) for details.
+Read [limitations](docs/limitations.md), [troubleshooting](docs/troubleshooting.md) and the [release checks](docs/release-1.0.1.md) for details.
 
-## Credits
+## Credits and licence
 
-RealWorldMC uses map data from Google and OpenStreetMap, with Cesium available for 3D map access. Keep provider credits visible. Credits become fainter while chat is open; chat opacity is unchanged.
+Earth data comes from Google and OpenStreetMap, with Cesium available for 3D map access. Moon and Mars imagery has separate [dataset credits](docs/planetary-data.md). Keep provider attribution visible when sharing captures.
 
-RealWorldMC uses [Apache License 2.0](LICENSE). Map data has separate provider terms. RealWorldMC is not affiliated with Mojang, Microsoft, Google, or Cesium.
+The code uses [Apache License 2.0](LICENSE). Map and imagery assets have their own terms. RealWorldMC is not affiliated with Mojang, Microsoft, Google or Cesium.
 
-Read the [licensing notes](docs/legal/README.md), [NOTICE](NOTICE) and [code of conduct](CODE_OF_CONDUCT.md) before contributing or redistributing.
+[NOTICE](NOTICE) · [Licensing notes](docs/legal/README.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
-## Screenshots and videos
+## Guides and development
 
-The [media checklist](docs/media.md) lists the screenshots and short clips needed for the README, download page and release. Only use actual gameplay to demonstrate features; keep provider attribution visible. Logo art is not a gameplay screenshot.
-
-For installation footage, follow the [step-by-step recording plan](docs/recording-plan.md). Browse all guides in the [documentation index](docs/README.md).
-
-Developer notes: [changelog](CHANGELOG.md), [automatic builds and releases](docs/releases.md), [release checklist](RELEASE-CHECKLIST.md), [26.2 port status](PORT-26.2.md).
+- [All documentation](docs/README.md)
+- [Capture checklist](docs/media.md) and [installation recording plan](docs/recording-plan.md)
+- [Architecture and handoff](HANDOFF.md)
+- [Changelog](CHANGELOG.md) and [1.0.1 release notes](docs/releases/v1.0.1.md)
+- [Build and release process](docs/releases.md), [release checklist](RELEASE-CHECKLIST.md) and [26.2 port status](PORT-26.2.md)

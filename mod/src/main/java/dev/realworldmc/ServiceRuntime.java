@@ -13,13 +13,15 @@ import java.util.concurrent.TimeUnit;
 /** Owns only the child it started. Never stops a manually started or other-profile service. */
 public final class ServiceRuntime {
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
-    private final int mapPort, photoPort;
+    private volatile int mapPort, photoPort;
+    private final boolean allowPortFallback;
     private Process process;
     private Path activeDirectory;
     private String error = "";
     private long lastAttempt;
-    public ServiceRuntime() { this(8765, 8766); }
-    ServiceRuntime(int mapPort, int photoPort) { this.mapPort=mapPort; this.photoPort=photoPort; Runtime.getRuntime().addShutdownHook(new Thread(this::stop, "RealWorldMC service cleanup")); }
+    public ServiceRuntime() { this(8765, 8766, true); }
+    ServiceRuntime(int mapPort, int photoPort) { this(mapPort, photoPort, false); }
+    ServiceRuntime(int mapPort, int photoPort, boolean allowPortFallback) { this.allowPortFallback=allowPortFallback; this.mapPort=mapPort; this.photoPort=photoPort; Runtime.getRuntime().addShutdownHook(new Thread(this::stop, "RealWorldMC service cleanup")); }
     public static Path directory(Path game, String configured) {
         return game.resolve(configured == null || configured.isBlank() ? "realworldmc-service" : configured).toAbsolutePath().normalize();
     }
@@ -42,6 +44,16 @@ public final class ServiceRuntime {
         catch (InterruptedException e) { Thread.currentThread().interrupt(); return "occupied"; }
         catch (Exception e) { return "occupied"; }
     }
+    public int mapPort() { return mapPort; }
+    public int photoPort() { return photoPort; }
+    private void selectFreePorts() throws IOException {
+        var loopback = java.net.InetAddress.getByName("127.0.0.1");
+        try (var map = new java.net.ServerSocket(0, 1, loopback);
+             var photo = new java.net.ServerSocket(0, 1, loopback)) {
+            mapPort = map.getLocalPort();
+            photoPort = photo.getLocalPort();
+        }
+    }
     public synchronized String error() { return error; }
     public synchronized boolean start(Path directory, String node) {
         return start(directory, node, true);
@@ -56,8 +68,12 @@ public final class ServiceRuntime {
         lastAttempt = System.currentTimeMillis();
         String map = health(mapPort), photo = health(photoPort);
         if (map != null || photo != null) {
-            error = "Another local map/photo service is using ports 8765 or 8766. Close the other RealWorldMC game or manual service, then retry.";
-            return false;
+            if (!allowPortFallback) {
+                error = "Another local map/photo service is using ports " + mapPort + " or " + photoPort + ". Close the other RealWorldMC game or manual service, then retry.";
+                return false;
+            }
+            try { selectFreePorts(); }
+            catch (IOException e) { error = "Could not find free local map/photo ports. Retry setup."; return false; }
         }
         Path code;
         try { code = useBundle ? BundledService.prepare(directory) : directory; }

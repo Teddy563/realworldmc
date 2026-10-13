@@ -21,16 +21,24 @@ import java.nio.file.*;
 /** Real OpenGL, actual Minecraft shaders, and transformed mixins; no network or saved world required. */
 public final class PhotoRenderingChecks implements ClientModInitializer {
     private boolean ran;
+    private SpaceFlightIntegrationChecks flightCheck;
+    private PlanetTravelChecks planetCheck;
     private static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     @Override public void onInitializeClient(){
         if(!Boolean.getBoolean("realworldmc.photoCheck"))return;
         ClientLifecycleEvents.CLIENT_STARTED.register(mc->GLFW.glfwHideWindow(mc.getWindow().getWindow()));
         ClientTickEvents.END_CLIENT_TICK.register(mc->{
+            if(planetCheck!=null){planetCheck.tick(mc);return;}
+            if(flightCheck!=null){flightCheck.tick(mc);return;}
             if(ran || mc.getOverlay()!=null || GameRenderer.getPositionTexShader()==null)return;
             ran=true;
-            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, geographic scale, clipping and render-state restoration"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
+            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);SpaceViewChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, geographic scale, clipping and render-state restoration, orbital projection and stars, Moon and Mars textured hemispheres"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
             catch(Throwable failure){failure.printStackTrace();try{Files.writeString(Path.of("photo-check-result.txt"),"FAIL: "+failure);}catch(Exception ignored){}}
-            finally{mc.stop();}
+            finally{
+                if(Boolean.getBoolean("realworldmc.planetTravelCheck")) {planetCheck=new PlanetTravelChecks();planetCheck.start(mc);}
+                else if(Boolean.getBoolean("realworldmc.spaceFlightCheck")) {flightCheck=new SpaceFlightIntegrationChecks();flightCheck.start(mc);}
+                else mc.stop();
+            }
         });
     }
     private static void check(Minecraft mc) throws Exception {

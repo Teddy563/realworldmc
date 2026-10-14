@@ -7,7 +7,7 @@ import java.net.http.*;
 import java.nio.file.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /** Owns only the child it started. Never stops a manually started or other-profile service. */
@@ -29,7 +29,40 @@ public final class ServiceRuntime {
         if (configured != null && !configured.isBlank() && !configured.equals("node")) return configured;
         Path bundled = directory.resolve("runtime/win-x64/node.exe");
         String arch = System.getProperty("os.arch");
-        if (System.getProperty("os.name").startsWith("Windows") && (arch.equals("amd64") || arch.equals("x86_64")) && Files.isRegularFile(bundled)) return bundled.toString();
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.startsWith("windows") && (arch.equals("amd64") || arch.equals("x86_64")) && Files.isRegularFile(bundled)) return bundled.toString();
+
+        // On macOS / Linux, GUI launchers often launch with a minimal PATH (/usr/bin:/bin).
+        // Check standard installation paths for Node 22+ (Homebrew, .local, NVM, standard Unix paths).
+        if (os.contains("mac") || os.contains("darwin") || os.contains("linux")) {
+            String home = System.getProperty("user.home", "");
+            List<String> candidates = new ArrayList<>(List.of(
+                home + "/.local/node/bin/node",
+                "/opt/homebrew/bin/node",
+                "/usr/local/bin/node",
+                home + "/.local/bin/node",
+                "/usr/bin/node"
+            ));
+
+            Path nvmDir = Path.of(home, ".nvm/versions/node");
+            if (Files.isDirectory(nvmDir)) {
+                try (var stream = Files.list(nvmDir)) {
+                    stream.filter(Files::isDirectory)
+                          .sorted(Comparator.comparing(Path::getFileName).reversed())
+                          .map(p -> p.resolve("bin/node").toString())
+                          .forEach(candidates::add);
+                } catch (Exception ignored) {}
+            }
+
+            for (String candidate : candidates) {
+                try {
+                    Path p = Path.of(candidate);
+                    if (Files.isRegularFile(p) && Files.isExecutable(p)) {
+                        return candidate;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
         return "node"; // Advanced installations can use an existing Node 22+ runtime.
     }
     private static String identity(Path directory) { return UUID.nameUUIDFromBytes(directory.toString().getBytes(StandardCharsets.UTF_8)).toString(); }

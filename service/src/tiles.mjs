@@ -162,7 +162,7 @@ export class TileClient {
         e.message = 'Map tile session rejected (HTTP 400). The tileset was reset; retry the command. If it repeats, restart the map service and check provider access.';
       }
       // An expired session shows up as a 4xx on tile requests: start over from root.json.
-      if ((e.status === 401 || e.status === 403) && gen === this.generation) {
+      if ((e.status === 401 || e.status === 403 || (e.status === 404 && sessionRequest)) && gen === this.generation) {
         try { await this.cfg.refreshEndpoint?.(); }
         finally { if (gen === this.generation) this.reset(`session error (${e.status})`); }
       }
@@ -241,10 +241,20 @@ export class TileClient {
     let p = this.decoding.get(key);
     if (!p) {
       p = (async () => {
-        const bytes = await this.fetchBytes(node.contentUrl, { cacheExt: '.glb' });
-        const mesh = await this.decodeLimiter.run(() => this.decodeGlb(bytes, node.transform));
-        this.decoded.set(key, mesh);
-        return mesh;
+        try {
+          const bytes = await this.fetchBytes(node.contentUrl, { cacheExt: '.glb' });
+          const mesh = await this.decodeLimiter.run(() => this.decodeGlb(bytes, node.transform));
+          this.decoded.set(key, mesh);
+          return mesh;
+        } catch (e) {
+          if (e.status === 404) {
+            console.warn(`[tiles] missing tile ${node.contentUrl} (404), skipping tile`);
+            const empty = { primitives: [], copyright: '' };
+            this.decoded.set(key, empty);
+            return empty;
+          }
+          throw e;
+        }
       })().finally(() => this.decoding.delete(key));
       this.decoding.set(key, p);
     }

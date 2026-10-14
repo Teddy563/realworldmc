@@ -82,16 +82,25 @@ function rgbToHsv(r, g, b) {
 
 export function classify(r, g, b, heightAboveGround) {
   const [h, s, v] = rgbToHsv(r, g, b);
-  if (h >= 65 && h <= 170 && s > 0.12 && v > 0.08) return heightAboveGround > 2 ? M.LEAVES : M.GRASS;
-  if (s < 0.13) {
-    if (v < 0.27) return M.ASPHALT;
+  // Vegetation (grass lawns, trees, bushes)
+  if (h >= 55 && h <= 175 && s > 0.10 && v > 0.06) {
+    return heightAboveGround > 1.8 ? M.LEAVES : M.GRASS;
+  }
+  // Low saturation: Asphalt, concrete/stone, light plaster/sidewalks
+  if (s < 0.14) {
+    if (v < 0.28) return M.ASPHALT;
     if (v > 0.68) return M.PLASTER;
     return M.STONE;
   }
-  if ((h < 22 || h > 340) && s > 0.3 && v > 0.25) return M.BRICK;
-  if (h >= 22 && h < 55) {
-    if (v > 0.6 && s < 0.45) return M.SAND;
-    return heightAboveGround > 1 ? M.WOOD : M.DIRT;
+  // Red brick, terracotta, tiled roofs
+  if ((h < 22 || h > 340) && s > 0.28 && v > 0.22) return M.BRICK;
+  // Yellow/Orange/Brown range: Sand, Wood, Dirt, Trails
+  if (h >= 20 && h <= 55) {
+    // Beaches, dunes, light sand
+    if (v > 0.55 && s < 0.50) return M.SAND;
+    // Wood / docks / timber structures / balconies
+    if (heightAboveGround > 0.8 && s >= 0.22 && v <= 0.65) return M.WOOD;
+    return heightAboveGround > 1.5 ? M.WOOD : M.DIRT;
   }
   return M.STONE;
 }

@@ -1,30 +1,93 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RealWorldMC Preview</title>
+<title>RealWorldMC - Nawigator Świata</title>
 <style>
-  :root { color-scheme: dark; }
-  html, body { margin: 0; height: 100%; background: #9cc3e6; font: 13px system-ui, sans-serif; overflow: hidden; }
-  #hud { position: fixed; left: 8px; top: 8px; background: rgba(0,0,0,.55); color: #fff; padding: 6px 10px; border-radius: 6px; }
-  #attr { position: fixed; left: 8px; bottom: 6px; color: #fff; text-shadow: 0 0 3px #000; }
+  :root { color-scheme: dark; --accent: #2563eb; --accent-hover: #1d4ed8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0f172a; font: 13px system-ui, -apple-system, sans-serif; overflow: hidden; color: #fff; }
+  
+  #topbar {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 10px 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 90vw; width: 680px;
+  }
+  .search-row { display: flex; width: 100%; gap: 8px; }
+  #search-input {
+    flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 14px; outline: none; transition: all 0.2s;
+  }
+  #search-input:focus { border-color: #3b82f6; background: rgba(255,255,255,0.12); }
+  .btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn-copy { background: #059669; }
+  .btn-copy:hover { background: #047857; }
+  
+  .chips-row { display: flex; gap: 6px; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: none; }
+  .chip {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+    padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .chip:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
+
+  #hud { position: fixed; left: 12px; bottom: 12px; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px solid rgba(255,255,255,0.1); }
+  #attr { position: fixed; right: 12px; bottom: 12px; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px); padding: 6px 10px; border-radius: 6px; font-size: 11px; opacity: 0.8; }
+  #toast {
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+    background: #10b981; color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
 </style>
 </head>
 <body>
-<div id="hud">Loading map data…</div>
+
+<div id="topbar">
+  <div class="search-row">
+    <input id="search-input" placeholder="Wpisz miasto lub adres (np. Zakopane, Tokyo, Grand Canyon)..." />
+    <button class="btn" id="search-btn">🔍 Szukaj</button>
+    <button class="btn btn-copy" id="copy-btn">📋 Kopiuj /earth goto</button>
+  </div>
+  <div class="chips-row">
+    <span class="chip" data-name="Paryż (Wieża Eiffla)" data-lat="48.8584" data-lon="2.2945">🗼 Paryż</span>
+    <span class="chip" data-name="Nowy Jork" data-lat="40.7580" data-lon="-73.9855">🗽 Nowy Jork</span>
+    <span class="chip" data-name="Warszawa (Pałac Kultury)" data-lat="52.2319" data-lon="21.0067">🏰 Warszawa</span>
+    <span class="chip" data-name="Tokio (Shibuya)" data-lat="35.6595" data-lon="139.7005">🏯 Tokio</span>
+    <span class="chip" data-name="Rzym (Koloseum)" data-lat="41.8902" data-lon="12.4922">🏛️ Rzym</span>
+    <span class="chip" data-name="Zakopane (Tatry)" data-lat="49.2992" data-lon="19.9496">🏔️ Zakopane</span>
+    <span class="chip" data-name="Wielki Kanion" data-lat="36.0544" data-lon="-112.1401">🏜️ Grand Canyon</span>
+    <span class="chip" data-name="Rio de Janeiro" data-lat="-22.9519" data-lon="-43.2105">🏝️ Rio</span>
+    <span class="chip" id="random-btn">🎲 Losowe</span>
+  </div>
+</div>
+
+<div id="hud">Wczytywanie mapy 3D…</div>
 <div id="attr"></div>
+<div id="toast">Skopiowano komendę do schowka! Wklej ją w czacie gry (Cmd+V).</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-// Renders the same /render/* data the Minecraft mod uses (MC coordinates: x east, y up, z south).
 const q = new URLSearchParams(location.search);
-const lat = q.get('lat') ?? '44.427454', lon = q.get('lon') ?? '26.087287';
+let curLat = q.get('lat') ?? '48.8584', curLon = q.get('lon') ?? '2.2945';
+let curPlaceName = 'Paryż';
+
 const hud = document.getElementById('hud');
+const searchInput = document.getElementById('search-input');
+const toast = document.getElementById('toast');
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(0x9cc3e6);
 document.body.appendChild(renderer.domElement);
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.5, 20000);
 const cam = (q.get('cam') ?? '-60,120,120').split(',').map(Number);
@@ -32,7 +95,12 @@ camera.position.set(cam[0], cam[1], cam[2]);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 70, 0);
 controls.update();
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 
 function parseTile(buf) {
   const dv = new DataView(buf); let o = 4;
@@ -63,25 +131,112 @@ function parseTile(buf) {
   return group;
 }
 
-let origin, shown = new Map();
+let origin, shown = new Map(), updateTimer = null;
 async function update() {
+  if (origin == null) return;
   const p = camera.position;
-  const sel = await (await fetch(`/render/select?lat=${lat}&lon=${lon}&h=${origin}&x=${p.x}&y=${p.y}&z=${p.z}`)).json();
-  document.getElementById('attr').textContent = sel.attribution.includes('Google') ? sel.attribution.join(', ') : ['Google', ...sel.attribution].join(', ');
-  const want = new Set(sel.tiles.map(t => t.id));
-  await Promise.all(sel.tiles.filter(t => !shown.has(t.id)).map(async t => {
-    const buf = await (await fetch(`/render/tile?lat=${lat}&lon=${lon}&h=${origin}&id=${t.id}`)).arrayBuffer();
-    const g = parseTile(buf); shown.set(t.id, g);
-  }));
-  if (!sel.pending) for (const [id, g] of shown) { if (!want.has(id)) { scene.remove(g); shown.delete(id); } }
-  for (const id of want) { const g = shown.get(id); if (g && !g.parent) scene.add(g); }
-  hud.textContent = `${shown.size} tiles, ${sel.pending} pending · Camera ${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)}`;
-  setTimeout(update, sel.pending ? 300 : 1500);
+  try {
+    const sel = await (await fetch(`/render/select?lat=${curLat}&lon=${curLon}&h=${origin}&x=${p.x}&y=${p.y}&z=${p.z}`)).json();
+    document.getElementById('attr').textContent = sel.attribution?.join(', ') || '';
+    const want = new Set(sel.tiles.map(t => t.id));
+    await Promise.all(sel.tiles.filter(t => !shown.has(t.id)).map(async t => {
+      try {
+        const res = await fetch(`/render/tile?lat=${curLat}&lon=${curLon}&h=${origin}&id=${t.id}`);
+        if (!res.ok) return;
+        const buf = await res.arrayBuffer();
+        const g = parseTile(buf); shown.set(t.id, g);
+      } catch (e) {}
+    }));
+    if (!sel.pending) for (const [id, g] of shown) { if (!want.has(id)) { scene.remove(g); shown.delete(id); } }
+    for (const id of want) { const g = shown.get(id); if (g && !g.parent) scene.add(g); }
+    hud.textContent = `📍 ${curPlaceName} (${Number(curLat).toFixed(4)}, ${Number(curLon).toFixed(4)}) · Kafelki 3D: ${shown.size}`;
+    clearTimeout(updateTimer);
+    updateTimer = setTimeout(update, sel.pending ? 300 : 1500);
+  } catch (e) {
+    hud.textContent = `Błąd ładowania terenu: ${e.message}`;
+  }
 }
+
+async function navigateTo(lat, lon, name) {
+  curLat = lat; curLon = lon; curPlaceName = name || `${lat}, ${lon}`;
+  shown.forEach(g => scene.remove(g));
+  shown.clear();
+  camera.position.set(-60, 120, 120);
+  controls.target.set(0, 70, 0);
+  controls.update();
+  hud.textContent = `Wyszukiwanie terenu dla ${curPlaceName}…`;
+  try {
+    const gr = await (await fetch(`/ground?lat=${curLat}&lon=${curLon}`)).json();
+    origin = gr.height;
+    update();
+  } catch (e) {
+    hud.textContent = `Brak danych 3D dla tej lokalizacji.`;
+  }
+}
+
+async function search() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+  hud.textContent = `Wyszukiwanie "${q}"…`;
+  try {
+    const res = await (await fetch(`/geocode?q=${encodeURIComponent(q)}`)).json();
+    if (res.lat && res.lon) {
+      navigateTo(res.lat, res.lon, res.address || q);
+    } else {
+      alert('Nie znaleziono takiego miejsca.');
+    }
+  } catch (e) {
+    alert('Błąd wyszukiwania: ' + e.message);
+  }
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  setTimeout(() => toast.style.opacity = '0', 2500);
+}
+
+document.getElementById('search-btn').onclick = search;
+searchInput.onkeydown = (e) => { if (e.key === 'Enter') search(); };
+
+document.getElementById('copy-btn').onclick = () => {
+  const cmd = `/earth goto ${curLat}, ${curLon}`;
+  navigator.clipboard.writeText(cmd).then(() => {
+    showToast(`Skopiowano: ${cmd} (wklej w czacie gry!)`);
+  });
+};
+
+document.querySelectorAll('.chip[data-lat]').forEach(chip => {
+  chip.onclick = () => {
+    searchInput.value = chip.dataset.name;
+    navigateTo(chip.dataset.lat, chip.dataset.lon, chip.dataset.name);
+  };
+});
+
+const randomSpots = [
+  { name: 'Piramidy w Gizie', lat: 29.9792, lon: 31.1342 },
+  { name: 'Wenecja', lat: 45.4387, lon: 12.3271 },
+  { name: 'Sydney Opera House', lat: -33.8568, lon: 151.2153 },
+  { name: 'Machu Picchu', lat: -13.1631, lon: -72.5450 },
+  { name: 'Dubaj (Burj Khalifa)', lat: 25.1972, lon: 55.2744 },
+  { name: 'Mont Blanc (Alpy)', lat: 45.8326, lon: 6.8652 }
+];
+document.getElementById('random-btn').onclick = () => {
+  const spot = randomSpots[Math.floor(Math.random() * randomSpots.length)];
+  searchInput.value = spot.name;
+  navigateTo(spot.lat, spot.lon, spot.name);
+};
+
 (async () => {
-  origin = q.get('h') ?? (await (await fetch(`/ground?lat=${lat}&lon=${lon}`)).json()).height;
-  update();
+  try {
+    origin = q.get('h') ?? (await (await fetch(`/ground?lat=${curLat}&lon=${curLon}`)).json()).height;
+    update();
+  } catch (e) {
+    origin = 0;
+    update();
+  }
 })();
+
 (function loop() { renderer.render(scene, camera); requestAnimationFrame(loop); })();
 </script>
 </body>

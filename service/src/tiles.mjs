@@ -87,6 +87,7 @@ export class TileClient {
     this.rootPromise = null;
     this.generation = 0;
     this.stats = { requests: 0, cacheHits: 0, bytes: 0 };
+    this.diskWrites = 0;
     this.io = null;
   }
 
@@ -170,9 +171,48 @@ export class TileClient {
     });
     this.stats.bytes += bytes.byteLength;
     if (cp) {
-      fs.promises.mkdir(path.dirname(cp), { recursive: true }).then(() => fs.promises.writeFile(cp, bytes)).catch(() => {});
+      fs.promises.mkdir(path.dirname(cp), { recursive: true }).then(async () => {
+        await fs.promises.writeFile(cp, bytes);
+        if ((++this.diskWrites % 50) === 0) this.pruneDiskCache();
+      }).catch(() => {});
     }
     return bytes;
+  }
+
+  async pruneDiskCache() {
+    const maxBytes = (this.cfg.maxDiskCacheMB ?? 2048) * 1024 * 1024;
+    try {
+      if (!fs.existsSync(this.cfg.cacheDir)) return;
+      const files = [];
+      let totalSize = 0;
+      const subdirs = await fs.promises.readdir(this.cfg.cacheDir);
+      for (const sub of subdirs) {
+        const subPath = path.join(this.cfg.cacheDir, sub);
+        const stat = await fs.promises.stat(subPath).catch(() => null);
+        if (stat?.isDirectory()) {
+          const names = await fs.promises.readdir(subPath).catch(() => []);
+          for (const name of names) {
+            const fpath = path.join(subPath, name);
+            const fstat = await fs.promises.stat(fpath).catch(() => null);
+            if (fstat?.isFile()) {
+              files.push({ path: fpath, size: fstat.size, mtime: fstat.mtimeMs });
+              totalSize += fstat.size;
+            }
+          }
+        }
+      }
+      if (totalSize > maxBytes) {
+        files.sort((a, b) => a.mtime - b.mtime);
+        while (files.length && totalSize > maxBytes * 0.85) {
+          const file = files.shift();
+          await fs.promises.unlink(file.path).catch(() => {});
+          totalSize -= file.size;
+        }
+        console.log(`[cache] pruned disk cache to ${(totalSize / (1024 * 1024)).toFixed(1)} MB`);
+      }
+    } catch (e) {
+      console.warn(`[cache] error pruning disk cache: ${e.message}`);
+    }
   }
 
   reset(reason) {

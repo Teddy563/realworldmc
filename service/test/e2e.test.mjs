@@ -1,6 +1,7 @@
 // End-to-end test against the mock tile server: node --test
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { startMockServer, MOCK_ORIGIN } from '../src/mock.mjs';
 import { EarthService, createServer, loadConfig } from '../src/server.mjs';
 import { Frame, geodeticToEcef, ecefToGeodetic } from '../src/geo.mjs';
@@ -38,7 +39,7 @@ test('service against mock tiles', async (t) => {
 
   const health = await (await fetch(`${base}/health`)).json();
   assert.equal(health.name, 'RealWorldMC');
-  assert.equal(health.version, '1.0.0');
+  assert.equal(health.version, JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version);
   for (const query of ['lat=91&lon=0', 'lat=&lon=0']) {
     assert.equal((await fetch(`${base}/ground?${query}`)).status, 400);
   }

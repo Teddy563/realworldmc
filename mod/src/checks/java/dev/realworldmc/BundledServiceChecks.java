@@ -49,6 +49,9 @@ public final class BundledServiceChecks {
                 check(Files.isSameFile(code.getParent(), data.resolve(".bundles")), "Release code must use a versioned directory");
                 check(!code.equals(installed), "New release installs beside the older version");
                 check(runtime.start(data, "node"), "Release must start both real services: " + runtime.error());
+                var previewRequest = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + mapPort + "/preview")).build();
+                var preview = java.net.http.HttpClient.newHttpClient().send(previewRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+                check(preview.statusCode() == 200 && preview.body().toLowerCase(Locale.ROOT).contains("<!doctype html>"), "Preview must resolve from the bundled code directory");
                 var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + photoPort + "/health")).build();
                 var health = java.net.http.HttpClient.newHttpClient().send(request, java.net.http.HttpResponse.BodyHandlers.ofString()).body();
                 check(health.contains("\"hasKey\":true"), "Photo service must read keys from the persistent data directory");

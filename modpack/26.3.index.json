@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "game": "minecraft",
+  "versionId": "1.0.0",
+  "name": "RealWorldMC 1.0.0 (Minecraft 26.3 - experimental)",
+  "summary": "Explore real places in Minecraft 26.3. Experimental Fabric build with browser Street View. Propwash compatibility needs in-game testing.",
+  "dependencies": {
+    "minecraft": "26.3",
+    "fabric-loader": "0.19.5"
+  },
+  "files": [
+    {
+      "path": "mods/fabric-api-0.163.0+26.3.jar",
+      "hashes": {
+        "sha512": "44fd8de10fa71ea39cf984d44d2ec4c8e9314f8af88ad95788d9a09ac7b02b5c2f796ae88f40e314bd27df677e66fed59d1a1b6784350b0cc1fd62efac9e08a3",
+        "sha1": "65ada8c72b61ffb256e956baf53df28155daa479"
+      },
+      "downloads": [
+        "https://cdn.modrinth.com/data/P7dR8mSH/versions/bq3SsNGk/fabric-api-0.163.0%2B26.3.jar"
+      ],
+      "fileSize": 1774707,
+      "env": {
+        "client": "required",
+        "server": "required"
+      }
+    }
+  ]
+}

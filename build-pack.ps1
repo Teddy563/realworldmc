@@ -1,11 +1,11 @@
-param([ValidateSet('1.21.1','26.2')][string]$MinecraftVersion = '1.21.1', [string]$ServiceDirectory = '', [string]$OutputDirectory = $PSScriptRoot, [switch]$VisualPack)
+param([ValidateSet('1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$ServiceDirectory = '', [string]$OutputDirectory = $PSScriptRoot, [switch]$VisualPack)
 $ErrorActionPreference = 'Stop'
-$jarName = if ($MinecraftVersion -eq '26.2') { 'realworldmc-mc26.2-1.0.0.jar' } else { 'realworldmc-1.0.0.jar' }
+$jarName = if ($MinecraftVersion -ne '1.21.1') { "realworldmc-mc$MinecraftVersion-1.0.0.jar" } else { 'realworldmc-1.0.0.jar' }
 $jar = Join-Path $PSScriptRoot $jarName
-if ($MinecraftVersion -eq '26.2' -and $VisualPack) { throw 'The visual pack is only available for 1.21.1.' }
+if ($MinecraftVersion -ne '1.21.1' -and $VisualPack) { throw 'The visual pack is only available for 1.21.1.' }
 if (-not (Test-Path -LiteralPath $jar -PathType Leaf)) { throw 'Missing realworldmc-1.0.0.jar. Extract the complete 1.0.0 release ZIP first.' }
 $index = if ($VisualPack) { 'modpack\visual.index.json' } else { 'modpack\modrinth.index.json' }
-if ($MinecraftVersion -eq '26.2') { $index = 'modpack\26.2.index.json' }
+if ($MinecraftVersion -ne '1.21.1') { $index = "modpack\$MinecraftVersion.index.json" }
 $suffix = if ($VisualPack) { '-visual' } else { '' }
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $pack = Join-Path ([IO.Path]::GetFullPath($OutputDirectory)) "RealWorldMC-1.0.0-mc$MinecraftVersion$suffix.mrpack"

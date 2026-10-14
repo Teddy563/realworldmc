@@ -1,4 +1,4 @@
-param([ValidateSet('1.21.1','26.2')][string]$MinecraftVersion = '1.21.1', [switch]$NoOpen)
+param([ValidateSet('1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [switch]$NoOpen)
 $ErrorActionPreference = 'Stop'
 $pack = Join-Path $PSScriptRoot "RealWorldMC-1.0.0-mc$MinecraftVersion.mrpack"
 if (-not (Test-Path -LiteralPath $pack)) { throw 'Download the ready-made .mrpack from Releases and import it into Modrinth or Prism.' }

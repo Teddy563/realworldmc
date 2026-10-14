@@ -12,6 +12,25 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  node-runtime:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify Node detection on this operating system
+        shell: bash
+        run: |
+          javac -d runtime-checks shared/src/main/java/dev/realworldmc/NodeRuntime.java shared/src/main/java/dev/realworldmc/LocalServicePorts.java shared/src/checks/java/dev/realworldmc/NodeRuntimeChecks.java
+          java -cp runtime-checks dev.realworldmc.NodeRuntimeChecks
   build:
     runs-on: windows-latest
     strategy:
@@ -23,6 +42,9 @@ jobs:
             java: '21'
           - minecraft: '26.2'
             module: mod-26.2
+            java: '25'
+          - minecraft: '26.3'
+            module: mod-26.3
             java: '25'
     steps:
       - uses: actions/checkout@v4
@@ -40,8 +62,8 @@ jobs:
         run: |
           $version = ((Get-Content "$env:MODULE/gradle.properties" | Where-Object { $_ -match '^version=' }) -split '=',2)[1].Trim()
           $service = (Get-Content service/package.json -Raw | ConvertFrom-Json).version
-          if ($version -ne $service) { throw 'Both Gradle projects and the service must use the same version.' }
-          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag must match version in both Gradle projects.' }
+          if ($version -ne $service) { throw 'All Gradle projects and the service must use the same version.' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag must match the version in every Gradle project.' }
       - name: Test local services
         working-directory: service
         run: |
@@ -83,7 +105,7 @@ jobs:
           if-no-files-found: error
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, node-runtime]
     runs-on: ubuntu-latest
     permissions:
       contents: write

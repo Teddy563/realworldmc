@@ -1,10 +1,14 @@
 # RealWorldMC handoff
 
+## 1.0.2 preparation, 15 October 2026
+
+Work is on `release/1.0.2`. It integrates PR #2 with corrected shared Node detection and retains the bundled-preview fix. Unrelated preview UI/cache/material changes are excluded. The new `mod-26.3` target shares 26.2 code/resources except the terrain generator and two graphics classes. CI builds all three targets and checks Node discovery on Windows/macOS/Linux. See [1.0.2 validation](docs/release-1.0.2.md) and [26.3 setup](docs/experimental-26.3.md). No release tag should be pushed before reviewing those results.
+
 Updated 2026-10-14 for the approved 1.0.1 release. The sections dated before this update preserve the development and testing record. See [release notes](docs/releases/v1.0.1.md) and [current validation and limits](docs/release-1.0.1.md).
 
 ## Project locations
 
-- **Mod:** `D:\RealWorldMC`, branch `main`, origin `https://github.com/Teddy563/realworldmc.git`.
+- **Mod:** `D:\RealWorldMC`, branch `main`, origin `https://github.com/Teddy563/realworldmc.git`. The 1.0.2 candidate is on `release/1.0.2`.
 - **Website:** `D:\RealWorldMC-SITE`, separate Astro project intended for `Teddy563/realworldmc-site`.
 - **Installed personal profile:** `D:\ModrinthApp\profiles\RealWorldMC-1.0.0-mc1.21.1`.
 - The working copy at `work/RealWorldMC` is build staging, not the canonical GitHub checkout.
@@ -12,7 +16,7 @@ Updated 2026-10-14 for the approved 1.0.1 release. The sections dated before thi
 
 ## What it does
 
-| Feature | Fabric 1.21.1 | Experimental 26.2 |
+| Feature | Fabric 1.21.1 | Experimental 26.2 / 26.3 |
 |---|---|---|
 | Real World preset and 3D terrain exploration | Yes, Java 21 | Yes, Java 25 |
 | 100 random new-world starts | Shared catalogue | Shared catalogue |
@@ -21,7 +25,7 @@ Updated 2026-10-14 for the approved 1.0.1 release. The sections dated before thi
 | Native Street View, blocks, mobs and excavations | Yes, approximate photo projection | Browser viewer only |
 | Native camera toggle | F5 | Native Minecraft camera |
 
-The display name is **RealWorldMC**, author **Teddy563**. Release version: **1.0.1**. The visible world type is **Real World**. `/earth` is the promoted command; stable also accepts `/rw`.
+The display name is **RealWorldMC**, author **Teddy563**. Published version: **1.0.1**; prepared candidate: **1.0.2**. The visible world type is **Real World**. `/earth` is the promoted command; stable also accepts `/rw`.
 
 New worlds select one of [100 curated destinations](docs/spawn-locations.md), including the Palace of Parliament. Selection is uniform and the coordinate pair is serialized with the generator. Reloads and deaths never reroll the world. Fixed custom starts remain supported.
 
@@ -46,7 +50,8 @@ The website reads public GitHub releases. It never receives API keys or renders 
 |---|---|
 | `shared/src/main/java/dev/realworldmc/SpawnLocations.java` | Immutable common spawn catalogue and selection |
 | `mod/` | Java 21 / Minecraft 1.21.1 Fabric target |
-| `mod-26.2/` | Separate Java 25 experimental target |
+| `mod-26.2/` | Java 25 experimental implementation shared with 26.3 |
+| `mod-26.3/` | Exact 26.3 target, terrain/GPU overrides and a disposable rendering check |
 | `mod/src/main/java/dev/realworldmc/RealWorldMC.java` | Commands, travel and region synchronization |
 | `EarthChunkGenerator`, `EarthRegions`, `Geo` | Collision chunks, saved geographic regions and coordinate transforms |
 | `PanoramaRoom`, `PanoramaPlaces`, `StreetEdits` | Photo stops, travel handshake, return state and persistent damage |

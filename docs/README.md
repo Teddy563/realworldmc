@@ -17,3 +17,5 @@ Code licence: [Apache 2.0](../LICENSE). [Licensing notes](legal/README.md). [Cod
 Maintainers: [build and publish releases](releases.md), [1.0.1 validation and limits](release-1.0.1.md), [portable install audit](install-audit.md).
 
 Developer handoff: [architecture, features and current state](https://github.com/Teddy563/realworldmc/blob/main/HANDOFF.md). [All 100 starting locations](spawn-locations.md).
+
+- [1.0.2 release notes](releases/v1.0.2.md), [validation](release-1.0.2.md) and [experimental 26.3 / Propwash](experimental-26.3.md)

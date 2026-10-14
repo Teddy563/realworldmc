@@ -1,0 +1,134 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = "realworldmc-mc26.3"
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"realworldmc" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version, "minecraft_version": project.minecraft_version, "loader_version": project.loader_version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+tasks.named('jar') {
+	from('../LICENSE')
+	from('../NOTICE')
+	from('../LICENSES') { into 'LICENSES' }
+}
+
+sourceSets {
+    main { java.srcDir '../shared/src/main/java' }
+    checks {
+        java.srcDir '../shared/src/checks/java'
+        java.srcDir '../mod/src/checks/java'
+        java.include 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java', 'dev/realworldmc/NodeRuntimeChecks.java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+// Disposable GPU smoke checks; this source set never enters release JARs.
+sourceSets {
+    clientcheck {
+        compileClasspath += sourceSets.client.compileClasspath + sourceSets.client.output + sourceSets.main.output
+        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.client.output + sourceSets.main.output
+    }
+}
+loom {
+    mods { 'realworldmc-rendercheck' { sourceSet sourceSets.clientcheck } }
+    runs {
+        renderCheck {
+            client()
+            source sourceSets.clientcheck
+            runDir 'run-render-check'
+            programArg '--width'
+            programArg '256'
+            programArg '--height'
+            programArg '256'
+        }
+    }
+}
+tasks.named('runRenderCheck') {
+    doFirst { delete layout.projectDirectory.file('run-render-check/render-check-result.txt') }
+    doLast {
+        def result = layout.projectDirectory.file('run-render-check/render-check-result.txt').asFile
+        if (!result.exists() || !result.text.startsWith('PASS:'))
+            throw new GradleException(result.exists() ? result.text : 'The GPU check did not produce a result.')
+    }
+}
+tasks.register('bundledServiceChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+}
+tasks.named('check') { dependsOn tasks.named('bundledServiceChecks') }
+tasks.register('standaloneJarChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    doFirst { if (!project.hasProperty('releaseJar')) throw new GradleException('Pass -PreleaseJar=path/to/release.jar') }
+    classpath = files(project.findProperty('releaseJar') ?: 'missing.jar') + sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+    args 'release'
+    environment 'PATH', ''
+}
+
+tasks.register('spawnLocationChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.SpawnLocationChecks'
+}
+tasks.named('check') { dependsOn tasks.named('spawnLocationChecks') }
+
+tasks.register('nodeRuntimeChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.NodeRuntimeChecks'
+}
+tasks.named('check') { dependsOn tasks.named('nodeRuntimeChecks') }
+
+// Both modern targets use the same implementation; the build pins the game APIs.
+sourceSets {
+    main {
+        java.srcDir '../mod-26.2/src/main/java'
+        // 26.3 replaces the old noise/carver/surface hooks with buildTerrain.
+        java.exclude { it.file.canonicalFile == file('../mod-26.2/src/main/java/dev/realworldmc/EarthChunkGenerator.java').canonicalFile }
+        resources.srcDir '../mod-26.2/src/main/resources'
+    }
+    client {
+        java.srcDir '../mod-26.2/src/client/java'
+        // The 26.3 GPU API moved from Blaze3D to RenderPearl.
+        java.exclude { it.file.canonicalFile in ['MapRenderer', 'MapTile'].collect { name -> file("../mod-26.2/src/client/java/dev/realworldmc/client/${name}.java").canonicalFile } }
+        resources.srcDir '../mod-26.2/src/client/resources'
+    }
+}

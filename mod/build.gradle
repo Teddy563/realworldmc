@@ -52,6 +52,7 @@ tasks.named('jar') {
 sourceSets {
     main { java.srcDir '../shared/src/main/java' }
 	checks {
+        java.srcDir '../shared/src/checks/java'
 		compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
 		runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
 	}
@@ -148,3 +149,10 @@ tasks.register('spawnLocationChecks', JavaExec) {
     mainClass = 'dev.realworldmc.SpawnLocationChecks'
 }
 tasks.named('check') { dependsOn tasks.named('spawnLocationChecks') }
+
+tasks.register('nodeRuntimeChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.NodeRuntimeChecks'
+}
+tasks.named('check') { dependsOn tasks.named('nodeRuntimeChecks') }

@@ -291,7 +291,10 @@ export function createServer(service) {
       switch (url.pathname) {
         case '/preview': {
           // Browser preview of the render data (same tiles the mod draws).
-          const html = fs.readFileSync(path.join(serviceDir, 'preview', 'index.html'));
+          const primary = path.join(serviceDir, 'preview', 'index.html');
+          const fallback = path.join(here, '..', 'preview', 'index.html');
+          const file = fs.existsSync(primary) ? primary : fallback;
+          const html = fs.readFileSync(file);
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
           return res.end(html);
         }

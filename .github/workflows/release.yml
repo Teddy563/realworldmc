@@ -29,7 +29,7 @@ jobs:
       - name: Verify Node detection on this operating system
         shell: bash
         run: |
-          javac -d runtime-checks shared/src/main/java/dev/realworldmc/NodeRuntime.java shared/src/checks/java/dev/realworldmc/NodeRuntimeChecks.java
+          javac -d runtime-checks shared/src/main/java/dev/realworldmc/NodeRuntime.java shared/src/main/java/dev/realworldmc/LocalServicePorts.java shared/src/checks/java/dev/realworldmc/NodeRuntimeChecks.java
           java -cp runtime-checks dev.realworldmc.NodeRuntimeChecks
   build:
     runs-on: windows-latest

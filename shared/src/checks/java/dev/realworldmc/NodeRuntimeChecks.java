@@ -17,6 +17,12 @@ public final class NodeRuntimeChecks {
     public static void main(String[] args) throws Exception {
         Path root = Files.createTempDirectory("RWMC Node paths with spaces ");
         try {
+            int reservedPort;
+            try (var reserved = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"))) {
+                reservedPort = reserved.getLocalPort();
+                check(!LocalServicePorts.available(reservedPort), "An occupied non-HTTP port must not be reused");
+            }
+            check(LocalServicePorts.available(reservedPort), "A released port must be available without an HTTP probe");
             check(NodeRuntime.supportedVersion("v22.0.0\n"), "Accept Node 22");
             check(NodeRuntime.supportedVersion("v24.21.0"), "Accept newer Node");
             check(!NodeRuntime.supportedVersion("v20.19.0"), "Reject old Node");

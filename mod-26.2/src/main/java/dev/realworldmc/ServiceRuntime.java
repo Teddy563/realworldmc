@@ -50,9 +50,8 @@ public final class ServiceRuntime {
         }
         if (System.currentTimeMillis() - lastAttempt < 15000) return false;
         lastAttempt = System.currentTimeMillis();
-        String map = health(mapPort), photo = health(photoPort);
-        if (map != null || photo != null) {
-            error = "Another local map/photo service is using ports 8765 or 8766. Close the other RealWorldMC game or manual service, then retry.";
+        if (!LocalServicePorts.available(mapPort) || !LocalServicePorts.available(photoPort)) {
+            error = "Another local map/photo service is using ports " + mapPort + " or " + photoPort + ". Close the other RealWorldMC game or manual service, then retry.";
             return false;
         }
         Path code;

@@ -8,6 +8,7 @@
 - Add the Fabric 26.3 target, its updated terrain and RenderPearl graphics APIs, and automated JAR/pack/ZIP packaging. Propwash FPV compatibility remains experimental.
 - Use the platform's default Java certificate store for builds and report the actual service package version in health checks.
 - Keep failed tile fetches retryable, with a regression check against caching empty terrain.
+- Check port availability by binding to localhost, separate from HTTP readiness probes, to avoid false startup conflicts on slow machines.
 
 See [1.0.2 release notes](docs/releases/v1.0.2.md) and [validation](docs/release-1.0.2.md).
 

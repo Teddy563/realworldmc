@@ -10,7 +10,15 @@ Actual Minecraft 1.21.1 footage with optional shaders. Provider credits remain v
 
 [Watch the 14-second flight preview](docs/assets/flight-preview.mp4) · [Screenshots and recording guide](docs/media.md)
 
-**Recommended: Minecraft Java 1.21.1 with Fabric.** It supports in-game Street View and the masked key setup screen. The separate 26.2 build is experimental and has browser Street View only. Both need internet access and your own provider credentials.
+**Recommended: Minecraft Java 1.21.1 with Fabric.** It supports in-game Street View and the masked key setup screen. The separate 26.2 and 26.3 builds are experimental and have browser Street View only. All targets need internet access and your own provider credentials.
+
+## Prepared for 1.0.2
+
+- Automatic Node.js 22+ detection on macOS and Linux, including Homebrew and NVM. Windows x64 keeps its included runtime.
+- A separate **experimental Fabric 26.3 build**, intended for testing with Propwash FPV. It requires Java 25; compatibility with the drone camera and shaders still needs in-game testing.
+- A fix for the bundled browser map preview, with cross-platform runtime checks.
+
+[1.0.2 release notes](docs/releases/v1.0.2.md) · [26.3 setup and limits](docs/experimental-26.3.md) · [Validation](docs/release-1.0.2.md)
 
 ## What is new in 1.0.1?
 
@@ -34,7 +42,7 @@ Space flight is experimental and currently available only in the 1.21.1 build. R
 
 **Prefer a ready-made profile?** Import the **1.21.1 Core `.mrpack`** from Releases into Modrinth App or Prism Launcher. It sets up Fabric and the mod dependencies. Do not add a second copy of the mod to that profile.
 
-No batch files, PowerShell scripts or separate Node installation are needed for the Windows x64 release. Other platforms need manual setup and further testing. This is a Fabric mod for Java Edition; it does not support Forge, NeoForge or Bedrock. The experimental 26.2 build needs Java 25 and manual key configuration. See [setup](docs/setup.md).
+No batch files, PowerShell scripts or separate Node installation are needed for the Windows x64 release. On macOS/Linux, install Node.js 22+; 1.0.2 finds it automatically. Full gameplay testing on those platforms remains outstanding. This is a Fabric mod for Java Edition; it does not support Forge, NeoForge or Bedrock. The experimental 26.2 and 26.3 builds need Java 25 and manual key configuration. See [setup](docs/setup.md).
 
 ## Everyday commands
 
@@ -73,7 +81,7 @@ Back up your worlds, close Minecraft and replace the old RealWorldMC JAR with th
 - This is an exploration and building mod, not a complete survival world generator.
 - Space mode moves the geographic view while keeping the physical player near the launch point. It is for filming, not gameplay across a block-built planet. Moon and Mars use bundled imagery, without terrain blocks, landings or additional imagery API requests.
 - The 1.0.1 build passed build, service and isolated gameplay/rendering checks. Those do not certify every shader or add-on. **Bliss showed a blank Earth return view in an offline test with both the previous and current JAR; that issue remains unresolved.**
-- Native space flight is not included in the experimental 26.2 module. Its build checks pass, but full gameplay testing remains outstanding.
+- Native space flight is not included in the experimental 26.2/26.3 modules. Their gameplay and shader compatibility need separate testing.
 
 Read [limitations](docs/limitations.md), [troubleshooting](docs/troubleshooting.md) and the [release checks](docs/release-1.0.1.md) for details.
 

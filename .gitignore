@@ -30,3 +30,8 @@ service/runtime/
 realworldmc-service/
 
 mod/run-photo-compat/
+
+mod-26.3/build/
+mod-26.3/.gradle/
+mod-26.3/run/
+mod-26.3/run-render-check/

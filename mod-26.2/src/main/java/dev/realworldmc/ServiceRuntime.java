@@ -23,12 +23,8 @@ public final class ServiceRuntime {
     public static Path directory(Path game, String configured) {
         return game.resolve(configured == null || configured.isBlank() ? "realworldmc-service" : configured).toAbsolutePath().normalize();
     }
-    public static String executable(Path directory, String configured) {
-        if (configured != null && !configured.isBlank() && !configured.equals("node")) return configured;
-        Path bundled = directory.resolve("runtime/win-x64/node.exe");
-        String arch = System.getProperty("os.arch");
-        if (System.getProperty("os.name").startsWith("Windows") && (arch.equals("amd64") || arch.equals("x86_64")) && Files.isRegularFile(bundled)) return bundled.toString();
-        return "node"; // Advanced installations can use an existing Node 22+ runtime.
+    public static String executable(Path directory, String configured) throws IOException {
+        return NodeRuntime.executable(directory, configured);
     }
     private static String identity(Path directory) { return UUID.nameUUIDFromBytes(directory.toString().getBytes(StandardCharsets.UTF_8)).toString(); }
     private static String health(int port) {
@@ -67,8 +63,10 @@ public final class ServiceRuntime {
         if (!Files.isRegularFile(code.resolve("src/launcher.mjs"))) {
             error = "Map service missing. Download the full release JAR or .mrpack, not a developer JAR."; return false;
         }
+        try { node = executable(code, node); }
+        catch (IOException e) { error = e.getMessage(); return false; }
         try {
-            var builder = new ProcessBuilder(executable(code, node), "--max-old-space-size=8192", code.resolve("src/launcher.mjs").toString())
+            var builder = new ProcessBuilder(node, "--max-old-space-size=8192", code.resolve("src/launcher.mjs").toString())
                 .directory(directory.toFile()).redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(directory.resolve("service.log").toFile()));
             builder.environment().put("RWMC_MANAGED", "1");

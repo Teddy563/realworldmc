@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "RealWorldMC",
   "icon": "assets/realworldmc/icon.png",
-  "description": "Explore real places with streamed 3D maps. Experimental Minecraft 26.2 build; Street View opens in a browser. Requires map access and a local service.",
+  "description": "Explore real places with streamed 3D maps. Experimental Minecraft ${minecraft_version} build; Street View opens in a browser. Requires map access and a local service.",
   "authors": [
     "Teddy563"
   ],
@@ -26,8 +26,8 @@
     }
   ],
   "depends": {
-    "fabricloader": ">=0.19.3",
-    "minecraft": "=26.2",
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "=${minecraft_version}",
     "java": ">=25",
     "fabric-api": "*"
   },

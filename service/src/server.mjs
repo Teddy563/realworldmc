@@ -20,6 +20,7 @@ import { voxelizeArea, mcPositions } from './voxel.mjs';
 import { spaceRenderOptions, spaceAltitude } from './space-view.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const serviceVersion = JSON.parse(fs.readFileSync(path.join(here, '..', 'package.json'), 'utf8')).version;
 const serviceDir = path.resolve(process.env.RWMC_DATA_DIR ?? path.resolve(here, '..'));
 
 const DEFAULTS = {
@@ -291,12 +292,15 @@ export function createServer(service) {
       switch (url.pathname) {
         case '/preview': {
           // Browser preview of the render data (same tiles the mod draws).
-          const html = fs.readFileSync(path.join(serviceDir, 'preview', 'index.html'));
+          const primary = path.join(serviceDir, 'preview', 'index.html');
+          const fallback = path.join(here, '..', 'preview', 'index.html');
+          const file = fs.existsSync(primary) ? primary : fallback;
+          const html = fs.readFileSync(file);
           res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
           return res.end(html);
         }
         case '/health':
-          return json(res, { ok: true, name: 'RealWorldMC', instanceId: process.env.RWMC_INSTANCE_ID ?? '', version: '1.0.0', hasKey: !!service.cfg.apiKey, provider: service.cfg.cesiumToken ? 'cesium' : 'google' });
+          return json(res, { ok: true, name: 'RealWorldMC', instanceId: process.env.RWMC_INSTANCE_ID ?? '', version: serviceVersion, hasKey: !!service.cfg.apiKey, provider: service.cfg.cesiumToken ? 'cesium' : 'google' });
         case '/stats':
           return json(res, { ...service.client.stats, nodes: service.client.nodes.size, decoded: service.client.decoded.map.size });
         case '/geocode':

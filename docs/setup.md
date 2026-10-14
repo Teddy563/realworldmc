@@ -39,14 +39,16 @@ For photos, use `/earth streetview`. Return with `/earth back`. No service termi
 
 If you change keys while playing, save through setup and reopen the world. You do not need a full Minecraft restart.
 
-## Experimental 26.2
+## Experimental 26.2 and 26.3
 
-Use its release JAR in a Fabric 26.2 profile with Fabric API and Java 25, or import its `.mrpack`. For a JAR install, launch once to unpack the service, then close Minecraft before editing keys. This version uses the same automatic service startup, but has no native setup screen or in-game Street View yet. Close Minecraft, copy the example configs inside the instance's `realworldmc-service` folder to `config.json` and `streetview.config.json`, enter your keys, then launch. Its browser viewer requires a separate Maps JavaScript API `browserKey`. Use a new test world.
+Use the matching release JAR in a Fabric 26.2 or 26.3 profile with Fabric API and Java 25, or import its `.mrpack`. For a JAR install, launch once to unpack the service, then close Minecraft before editing keys. This version uses the same automatic service startup, but has no native setup screen or in-game Street View yet. Close Minecraft, copy the example configs inside the instance's `realworldmc-service` folder to `config.json` and `streetview.config.json`, enter your keys, then launch. Its browser viewer requires a separate Maps JavaScript API `browserKey`. Use a new test world.
 
 ## Advanced or existing installations
 
 The release ZIP is optional troubleshooting material. Its manual launchers remain available for developers. Use the release JAR or `.mrpack` for normal installation.
 
-Linux, macOS and Windows ARM do not have a bundled runtime in this release. Advanced users can install Node.js 22+, use the service files from the pack, and configure `nodeExecutable` in `config/realworldmc.json`; those platforms need further testing. An existing custom `serviceDir` still resolves as an absolute path or relative to the instance directory. For the portable pack, leave it as `realworldmc-service`.
+Linux, macOS and Windows ARM do not have a bundled runtime. Install Node.js 22+. From 1.0.2, Linux/macOS detect a compatible Node from PATH, Homebrew, standard local locations or NVM (including `NVM_DIR`). The release JAR already includes the service files. If detection fails, set `nodeExecutable` in `config/realworldmc.json` to the full Node path. Full gameplay on those platforms still needs testing. An existing custom `serviceDir` still resolves as an absolute path or relative to the instance directory. For the portable pack, leave it as `realworldmc-service`.
 
 For the optional browser companion on 1.21.1, add a restricted Maps JavaScript API `browserKey` in `realworldmc-service/streetview.config.json`, keeping it separate from the native `tilesKey`. Restart Minecraft after manual file edits. The first-run screen configures the native key, not browser access.
+
+For Propwash FPV and the 26.3 target, see [experimental 26.3](experimental-26.3.md).

@@ -22,8 +22,8 @@
 
 ## Versions and performance
 
-- Use the exact 1.21.1 or 26.2 build. Intermediate Minecraft versions are not supported by these artifacts.
-- 26.2 is experimental: native photo gameplay is absent, distant terrain can clip, and shader compatibility is unverified.
+- Use the exact 1.21.1, 26.2 or 26.3 build. Other Minecraft versions are not supported by these artifacts.
+- 26.2 and 26.3 are experimental: native photo gameplay and space flight are absent, distant terrain can clip, and shader compatibility is unverified. The 26.3 port uses the new terrain and graphics APIs; Propwash compatibility still needs in-world testing.
 - On 1.21.1, coarse map tiles provide the distant preview, with an 8,000-block default. This does not increase collision or simulation distance.
 - Distant Horizons rendering is suppressed in Earth and photo dimensions. Street View uses the vanilla Iris pipeline; other dimensions keep their usual shaders.
 - Automated builds and selected rendering checks pass. They do not prove every shader/mod combination or long session works.

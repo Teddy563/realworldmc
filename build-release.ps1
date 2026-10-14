@@ -1,10 +1,10 @@
-param([ValidateSet('1.21.1','26.2')][string]$MinecraftVersion = '1.21.1', [string]$OutputDirectory = (Join-Path $PSScriptRoot 'release-output'))
+param([ValidateSet('1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$OutputDirectory = (Join-Path $PSScriptRoot 'release-output'))
 $ErrorActionPreference = 'Stop'
-$module = if ($MinecraftVersion -eq '26.2') { 'mod-26.2' } else { 'mod' }
+$module = if ($MinecraftVersion -ne '1.21.1') { "mod-$MinecraftVersion" } else { 'mod' }
 $versionLine = Get-Content (Join-Path $PSScriptRoot "$module/gradle.properties") | Where-Object { $_ -match '^version=' }
 $version = ($versionLine -split '=',2)[1].Trim()
 if ($version -notmatch '^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$') { throw 'Invalid project version.' }
-$jarName = if ($MinecraftVersion -eq '26.2') { "realworldmc-mc26.2-$version.jar" } else { "realworldmc-$version.jar" }
+$jarName = if ($MinecraftVersion -ne '1.21.1') { "realworldmc-mc$MinecraftVersion-$version.jar" } else { "realworldmc-$version.jar" }
 $jar = Join-Path $PSScriptRoot "$module/build/libs/$jarName"
 if (-not (Test-Path $jar)) { throw "Build $module first. Missing $jarName" }
 $out = [IO.Path]::GetFullPath($OutputDirectory)
@@ -18,7 +18,7 @@ foreach ($name in @('README.md','LICENSE','NOTICE','CHANGELOG.md','CODE_OF_CONDU
 foreach ($name in @('docs','LICENSES','modpack')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $stage -Recurse }
 foreach ($name in @('build-pack.ps1','install.ps1')) {
     $body = [IO.File]::ReadAllText((Join-Path $PSScriptRoot $name)).Replace('1.0.0', $version)
-    if ($MinecraftVersion -eq '26.2' -and $name -eq 'install.ps1') { $body = $body.Replace("`$MinecraftVersion = '1.21.1'", "`$MinecraftVersion = '26.2'") }
+    if ($MinecraftVersion -ne '1.21.1' -and $name -eq 'install.ps1') { $body = $body.Replace("`$MinecraftVersion = '1.21.1'", "`$MinecraftVersion = '$MinecraftVersion'") }
     [IO.File]::WriteAllText((Join-Path $stage $name), $body)
 }
 foreach ($index in Get-ChildItem (Join-Path $stage 'modpack') -Filter '*.json') {

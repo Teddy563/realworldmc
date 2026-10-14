@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2 - prepared for testing, 2026-10-15
+
+- Integrate the Node runtime discovery contribution from PR #2, with Node 22+ validation, PATH priority, numeric NVM ordering, custom NVM_DIR support and bounded probes.
+- Share the detector across stable and experimental builds; add Windows/macOS/Linux CI checks.
+- Keep the bundled-preview path fix. Exclude the unrelated preview UI, cache and material changes from that PR.
+- Add the Fabric 26.3 target, its updated terrain and RenderPearl graphics APIs, and automated JAR/pack/ZIP packaging. Propwash FPV compatibility remains experimental.
+- Use the platform's default Java certificate store for builds and report the actual service package version in health checks.
+- Keep failed tile fetches retryable, with a regression check against caching empty terrain.
+
+See [1.0.2 release notes](docs/releases/v1.0.2.md) and [validation](docs/release-1.0.2.md).
+
 ## 1.0.1 (2026-10-14)
 
 - Hide the launch world's terrain, mobs, block entities, particles and border effects during orbit. Prevent targeting invisible Earth objects; restore the ordinary view on return without deleting world contents.

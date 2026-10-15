@@ -24,13 +24,20 @@ public final class SpaceFlight {
     private static boolean landing, anchored, autoSuppressed;
     private static double height, previousHeight, verticalVelocity;
     private static OrbitLanding.Arrival arrival;
+    private static dev.realworldmc.TravelLoading arrivalProgress;
+    private static long landingStarted;
+    public static void terrainReady() {
+        var progress=arrivalProgress; arrivalProgress=null;
+        var server=Minecraft.getInstance().getSingleplayerServer();
+        if(progress!=null && server!=null)server.execute(progress::close);
+    }
     private SpaceFlight() {}
 
     public static boolean enabled() { return enabled; }
     public static CelestialBody body() { return body; }
     public static boolean anchored() { return enabled && anchored; }
-    public static boolean posed(net.minecraft.world.entity.Entity entity) { return enabled && entity == Minecraft.getInstance().player; }
-    public static FlightPose pose() { return pose; }
+    public static boolean posed(net.minecraft.world.entity.Entity entity) { return (enabled || CreativeFlight.enabled()) && entity == Minecraft.getInstance().player; }
+    public static FlightPose pose() { return CreativeFlight.enabled() ? CreativeFlight.pose() : pose; }
     public static org.joml.Quaterniond orbitRotation(float partial) { return enabled ? activeOrbit().rotation(partial) : new org.joml.Quaterniond(); }
     private static GlobeOrbit activeOrbit() { return body==CelestialBody.EARTH ? orbit : planetaryOrbit; }
     public static Vec3 mapCamera(Vec3 camera, EarthRegions.Region region, float partial) {
@@ -50,8 +57,8 @@ public final class SpaceFlight {
     }
     public static double exitHeight() { return EarthConfig.get().spaceEntryHeight()*.8; }
     public static double verticalSpeed(double altitude) {
-        // Metres per tick: precise near terrain, fast enough to reach a full globe in about a minute.
-        return Math.min(250_000, Math.max(1, (Math.max(0, altitude) + 500) / 45));
+        // Match local cruise at entry/exit; increase gently rather than jumping to orbital speed.
+        return Math.min(20_000, CreativeFlight.MAX_SPEED + Math.max(0, altitude - EarthConfig.get().spaceEntryHeight()) * .002);
     }
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
@@ -124,15 +131,17 @@ public final class SpaceFlight {
             mc.player.setDeltaMovement(Vec3.ZERO);
             // Keep ordinary Creative flight on: leaving orbit must not start a long fall.
         }
+        if(arrival!=null) { arrivalProgress=arrival.loading(); terrainReady(); }
         enabled = false; anchored=false; arrival=null; verticalVelocity=0;
         session++; landing = false;
         orbit.reset();
         planetaryOrbit.reset();body=CelestialBody.EARTH;
     }
     static void completeArrival(Minecraft mc) {
-        if(landing && arrival!=null && mc.player!=null && mc.player.position().distanceTo(arrival.position())<1) {
+        if(landing && arrival!=null && mc.player!=null && mc.player.position().distanceTo(arrival.position())<32) {
             MapRenderer.INSTANCE.finishLanding(arrival.region());
-            stop(mc);autoSuppressed=true;ActionBar.show(RWMessages.message("Local flight · Shift: down"));
+            var progress=arrival.loading(); arrival=null;
+            stop(mc);arrivalProgress=progress;autoSuppressed=true;ActionBar.show(RWMessages.message("Local flight · Shift: down"));
         }
     }
     private static void tick(Minecraft mc) {
@@ -149,6 +158,11 @@ public final class SpaceFlight {
             start(mc);
         }
         if (landing) {
+            if(net.minecraft.Util.getMillis()-landingStarted>120_000) {
+                MapRenderer.INSTANCE.cancelLanding();stop(mc);autoSuppressed=true;
+                ActionBar.show(RWMessages.message("Descent timed out. Flight restored. Use /earth space return."));
+                return;
+            }
             mc.player.setDeltaMovement(Vec3.ZERO); orbit.hold(); previousHeight=height;
             // Server completion may precede its teleport packet. Keep the view until the client arrives.
             completeArrival(mc);
@@ -162,27 +176,29 @@ public final class SpaceFlight {
         int direction = (mc.options.keyJump.isDown() ? 1 : 0) - (mc.options.keyShift.isDown() ? 1 : 0);
         int forward = (mc.options.keyUp.isDown() ? 1 : 0) - (mc.options.keyDown.isDown() ? 1 : 0);
         int right=(mc.options.keyRight.isDown()?1:0)-(mc.options.keyLeft.isDown()?1:0);
+        forward=CreativeFlight.rocketForward(forward,right,direction);
         pose.tick(forward,right,direction,mc.player.getYRot());
         if(!anchored && physicalHeight(mc)>=EarthConfig.get().spaceEntryHeight()) {
             anchored=true;height=previousHeight=physicalHeight(mc);mc.player.setDeltaMovement(Vec3.ZERO);
         }
         double currentHeight=altitude();
-        verticalVelocity+=(direction*verticalSpeed(currentHeight)-verticalVelocity)*.2;
+        double lift = Math.clamp(direction - (CreativeFlight.enabled() ? Math.sin(Math.toRadians(mc.player.getXRot())) * forward : 0), -1, 1);
+        verticalVelocity+=(lift*verticalSpeed(currentHeight)*CreativeFlight.speedFactor()-verticalVelocity)*.2;
         if(direction==0 && Math.abs(verticalVelocity)<.01)verticalVelocity=0;
         if (anchored) {
             previousHeight=height;
             double floor=body==CelestialBody.EARTH ? exitHeight()-50 : body.minimumAltitude;
             height=Math.clamp(height+verticalVelocity,floor,20_000_000);
             if(height==floor || height==20_000_000)verticalVelocity=0;
-            activeOrbit().tick(height,mc.player.getYRot(),forward,right,body.radius);
+            activeOrbit().tick(height,mc.player.getYRot(),forward,right,body.radius,CreativeFlight.speedFactor());
             // Geographic altitude changes; Steve stays at a stable Minecraft position for filming.
             mc.player.setDeltaMovement(Vec3.ZERO);
-            if(body==CelestialBody.EARTH && direction<0 && height<=exitHeight())beginLanding(mc);
+            if(body==CelestialBody.EARTH && lift<0 && height<=exitHeight())beginLanding(mc);
         } else {
             double yaw = Math.toRadians(mc.player.getYRot());
-            double cruise=Math.min(12,Math.max(.4,currentHeight/100))/Math.max(1,Math.hypot(forward,right));
+            double cruise=verticalSpeed(currentHeight)*CreativeFlight.speedFactor()/Math.max(1,Math.hypot(forward,right));
             double movement=Math.clamp(verticalVelocity,mc.level.getMinBuildHeight()+2-mc.player.getY(),20_000_000-mc.player.getY());
-            mc.player.setDeltaMovement((-Math.sin(yaw)*forward+Math.cos(yaw)*right)*cruise,movement,(Math.cos(yaw)*forward+Math.sin(yaw)*right)*cruise);
+            mc.player.setDeltaMovement((-Math.sin(yaw)*forward-Math.cos(yaw)*right)*cruise,movement,(Math.cos(yaw)*forward-Math.sin(yaw)*right)*cruise);
         }
     }
     private static boolean beginLanding(Minecraft mc) {
@@ -198,6 +214,7 @@ public final class SpaceFlight {
             ahead.x-region.offsetX(),ahead.y,ahead.z-region.offsetZ());
         var localAhead=dev.realworldmc.Geo.geodeticToMc(location[0],location[1],location[2],aheadGeo[0],aheadGeo[1],aheadGeo[2]);
         float yaw=(float)Math.toDegrees(Math.atan2(-localAhead[0],localAhead[2])),pitch=mc.player.getXRot();
+        landingStarted=net.minecraft.Util.getMillis();
         landing=true; orbit.hold(); verticalVelocity=0;previousHeight=height;mc.player.setDeltaMovement(Vec3.ZERO);
         MapRenderer.INSTANCE.preserveForLanding();
         int ticket=++session; var server=mc.getSingleplayerServer(); var id=mc.player.getUUID();
@@ -205,7 +222,7 @@ public final class SpaceFlight {
             var player=server.getPlayerList().getPlayer(id);
             if(player==null || ticket!=session)return;
             dev.realworldmc.OrbitLanding.begin(player,location,yaw,pitch,()->ticket==session, (result,failure)->mc.execute(()->{
-                if(ticket!=session)return;
+                if(ticket!=session) {if(result!=null)server.execute(result.loading()::close);return;}
                 if(failure==null) arrival=result;
                 else { landing=false;MapRenderer.INSTANCE.cancelLanding(); mc.options.keyShift.setDown(false); ActionBar.show(RWMessages.message("Descent unavailable · retry Shift or /earth space return")); }
             }));

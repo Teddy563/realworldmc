@@ -6,6 +6,7 @@ mod/build/
 mod/.gradle/
 mod/run/
 mod/run-photo-check/
+mod/run-flight-check/
 mod/run-photo-production/
 mod/run-gametest/
 *.mrpack

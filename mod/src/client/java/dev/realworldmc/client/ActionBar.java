@@ -37,10 +37,18 @@ public final class ActionBar {
     }
     public static List<String> flightControls() {
         var mc=Minecraft.getInstance();var controls=new ArrayList<String>();
+        if(CreativeFlight.enabled()) {
+            controls.add(CreativeFlight.status());
+            controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": forward / back · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
+            controls.add(key(PanoramaRenderer.INSTANCE.flightSpeedKey(true))+" / "+key(PanoramaRenderer.INSTANCE.flightSpeedKey(false))+": speed · "+key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            controls.add("/earth fly: off · Rockets: boost");
+        }
         if(SpaceFlight.enabled()) {
             controls.add(String.format(java.util.Locale.ROOT,"%s orbit · %.1f km",SpaceFlight.body().title,SpaceFlight.altitude()/1000));
-            controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": cruise · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
-            controls.add(key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            if(!CreativeFlight.enabled()) {
+                controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": cruise · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
+                controls.add(key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            }
             controls.add("/earth space return: back");
             controls.add("/rw moon · /rw mars · /rw earth");
         }
@@ -49,14 +57,14 @@ public final class ActionBar {
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
-            if (words.length < 2 || words.length > 3 || !(words[0].equals("earth") || words[0].equals("rw")) || !words[1].equals("actionbar")) return true;
+            if (words.length < 2 || words.length > 3 || !(words[0].equals("earth") || words[0].equals("rw")) || !words[1].equals("hud")) return true;
             if (words.length == 3 && !java.util.Set.of("on", "off").contains(words[2])) return true;
             var cfg = EarthConfig.get();
             cfg.actionBar = words.length == 2 ? !cfg.actionBar : words[2].equals("on");
             cfg.save();
             clear();
             var mc = Minecraft.getInstance();
-            if (mc.player != null) mc.player.displayClientMessage(RWMessages.message("Corner information " + (cfg.actionBar ? "on." : "off. Use /earth actionbar on to restore it.")), false);
+            if (mc.player != null) mc.player.displayClientMessage(RWMessages.message("Corner information " + (cfg.actionBar ? "on." : "off. Use /earth hud on to restore it.")), false);
             return false;
         });
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->clear());

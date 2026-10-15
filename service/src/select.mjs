@@ -100,12 +100,20 @@ function ready(client, node, depth = 0) {
 export async function selectRenderTiles(client, frame, cam, opts) {
   const root = await client.getRoot();
   const { maxSse, sseFactor, far, fineRadius, targetError, maxTiles, falloff } = opts;
+  const ahead = opts.ahead ?? [0, 0];
+  const length = Math.hypot(...ahead);
+  const scale = length > 256 ? 256 / length : 1;
+  const predicted = [cam[0] + ahead[0] * scale, cam[1], cam[2] + ahead[1] * scale];
+  const distanceTo = node => {
+    const bb = nodeAabb(frame, node);
+    const distance = point => Math.max(0, Math.hypot(...bb.center.map((v, i) => v - point[i])) - bb.radius);
+    // Current terrain wins ties; future terrain gets coarser detail within the same tile budget.
+    return Math.min(distance(cam), distance(predicted) + 64);
+  };
   const out = [];
   let pending = 0;
   const visit = (node) => {
-    const bb = nodeAabb(frame, node);
-    const dx = bb.center[0] - cam[0], dy = bb.center[1] - cam[1], dz = bb.center[2] - cam[2];
-    const dist = Math.max(0, Math.hypot(dx, dy, dz) - bb.radius);
+    const dist = distanceTo(node);
     if (dist > far) return;
     const sse = (node.geometricError * sseFactor) / Math.max(dist, 1);
     const allowed = maxSse * (1 + dist / falloff);
@@ -124,9 +132,5 @@ export async function selectRenderTiles(client, frame, cam, opts) {
     if (node.hasContent) out.push({ node, dist });
   };
   visit(root);
-  const distanceTo=node=>{
-    const bb=nodeAabb(frame,node);
-    return Math.max(0,Math.hypot(bb.center[0]-cam[0],bb.center[1]-cam[1],bb.center[2]-cam[2])-bb.radius);
-  };
   return { tiles: coarsenToBudget(out,maxTiles,distanceTo), pending };
 }

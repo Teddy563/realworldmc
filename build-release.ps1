@@ -5,6 +5,10 @@ $versionLine = Get-Content (Join-Path $PSScriptRoot "$module/gradle.properties")
 $version = ($versionLine -split '=',2)[1].Trim()
 if ($version -notmatch '^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$') { throw 'Invalid project version.' }
 $jarName = if ($MinecraftVersion -ne '1.21.1') { "realworldmc-mc$MinecraftVersion-$version.jar" } else { "realworldmc-$version.jar" }
+# Refresh the distributable even when a previous release JAR already exists.
+# Client test tasks compile classes but do not rebuild the distributable JAR.
+& (Join-Path $PSScriptRoot "$module/gradlew.bat") -p (Join-Path $PSScriptRoot $module) --no-daemon assemble
+if ($LASTEXITCODE -ne 0) { throw "Failed to build the release JAR for $MinecraftVersion" }
 $jar = Join-Path $PSScriptRoot "$module/build/libs/$jarName"
 if (-not (Test-Path $jar)) { throw "Build $module first. Missing $jarName" }
 $out = [IO.Path]::GetFullPath($OutputDirectory)

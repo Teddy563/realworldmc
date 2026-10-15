@@ -7,13 +7,15 @@ Available in v1.0.1 on Minecraft 1.21.1. Space flight is experimental and is not
 3. Hold **Space** to rise or **Shift** to descend. **W/S** move forward/back, **A/D** strafe, and the mouse steers. Acceleration and braking are gradual. Release the controls to slow to a hover. Speed increases with altitude.
 4. Look down to keep Earth in the shot. **F5** remains the normal camera toggle. **F1** hides the HUD for recording.
 5. Run `/earth space return` to return to where space mode began. `/earth space off` also returns there once the view is anchored; below the entry height, it resumes ordinary Creative flight in place. After either command, automatic entry stays suppressed until you fly below the lower exit height. `/earth space` can still start it manually.
-6. Use `/earth actionbar` to toggle the compact controls and status above the bottom-left credits. `/earth actionbar on` and `/earth actionbar off` set it explicitly. Your choice is saved. Chat, boss bars, source credits and other mods' action bars stay available.
+6. Use `/earth hud` to toggle the compact controls and status above the bottom-left credits. `/earth hud on` and `/earth hud off` set it explicitly. Your choice is saved. Chat, boss bars, source credits and other mods' action bars stay available.
 
 Earth flight stays in the same world and uses the same Google 3D tiles, including their Earth curvature. Above the entry height, horizontal and vertical movement both move the geographic view while Steve stays near one Minecraft position. This avoids huge player movement packets, camera jitter and unnecessary chunk travel. Both altitude and globe rotation interpolate between ticks.
 
 While orbit is active, local Minecraft terrain, other entities, block entities, particles and world-border effects are hidden. The launch world stays saved and appears again when you return. The crosshair cannot mine or target invisible Earth objects from the orbital view.
 
-Steve's pose follows the movement keys, independently of where you look. Space raises both arms for an upright climb. Shift tips the body into a downward dive. Forward cruise uses a one-arm-leading pose, and releasing the controls relaxes into a hover. No elytra or equipment changes are needed.
+With `/earth glide` or `/earth fly` enabled, [automatic hover/glide, speed controls and rocket boosts](flight.md) also apply in orbit. Turning either mode off restores the default space controls.
+
+Without automatic glide enabled, Steve's pose follows the movement keys, independently of where you look. Space raises both arms for an upright climb. Shift tips the body into a downward dive. Forward cruise uses a one-arm-leading pose, and releasing the controls relaxes into a hover. No elytra or equipment changes are needed.
 
 Entering space keeps the current map tiles. During a detail swap, loaded scenery stays visible until new tiles or coarse parents are available. A geographic handoff retains the last visible tiles in the correct position until the destination loads. In `config/realworldmc.json`, `autoSpaceFlight` enables automatic entry and `spaceEntryHeight` sets the height in metres (2,000 to 100,000; default 2,000). Restart after editing. The exit height is 80% of the entry height to prevent repeated switching near the boundary.
 
@@ -28,9 +30,9 @@ In the same Creative, singleplayer Real World world:
 - `/rw earth` restores the Earth orbit you left.
 - `/earth space return` returns to your original Minecraft launch position.
 
-The `/earth` prefix also accepts `moon`, `mars` and `earth`. W/S and A/D move around the globe; Space and Shift change altitude. Speed grows with altitude, up to 250 km per tick for ascent. Earth-to-globe ascent from the default entry height takes less than 70 seconds at 20 ticks per second.
+The `/earth` prefix also accepts `moon`, `mars` and `earth`. W/S and A/D move around the globe; Space and Shift change altitude. Speed starts at local flight speed and grows gradually with altitude, capped at 20 km per tick. Entry and descent use the same continuous speed curve.
 
-Above 100 km, look around for the Moon, Mars or Earth travel markers. Aim at one and hold your forward key for 2.5 seconds to transfer. Look away or release the key to cancel. After arrival, release forward before choosing another marker. These are navigation signs, not the planets' real positions or distances. F1 and `/earth actionbar off` hide them and disable marker activation; commands still work.
+Above 100 km, look around for the Moon, Mars or Earth travel markers. Aim at one and hold your forward key for 2.5 seconds to transfer. Look away or release the key to cancel. After arrival, release forward before choosing another marker. These are navigation signs, not the planets' real positions or distances. F1 and `/earth hud off` hide them and disable marker activation; commands still work.
 
 These two destinations use bundled, real global image mosaics. The Moon map is 4096×2048; Mars is 1440×720. They are mapped onto spheres with the bodies' mean radii. There are no generated planet blocks, collision terrain, landings or Moon/Mars Street View. Minimum flyover heights are 20 km for the Moon and 40 km for Mars. Close-up detail is limited by the original images. No Google or Cesium requests are made for planetary imagery. Earth map requests pause while visiting these destinations; a request already in flight can still finish.
 

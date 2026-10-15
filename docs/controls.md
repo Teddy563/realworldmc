@@ -17,6 +17,12 @@ These instructions are for **1.21.1**. On 26.2, Street View opens the browser co
 
 `/earth setlocation 44.427454 26.087287` changes the start for **new worlds** and requires command permission. Existing worlds keep their own origin.
 
+## Glide and fly
+
+`/earth fly` toggles equipment-free flight. Steve automatically glides while moving quickly and stands upright when hovering or moving straight up/down. `/earth glide` enables the same mode. Add `on` or `off` to either command; `/rw` works too. These modes require Creative singleplayer.
+
+W/S move forward/back, A/D strafe, arrow up/down changes speed, and Space/Shift rises/descends. Release movement keys to slow to a hover. Fireworks provide an optional boost. See [the flight guide](flight.md) for speeds, camera behaviour and globe transitions.
+
 ## Street View
 
 1. Run `/earth streetview` while standing or flying in an Earth location. It searches within 500 metres of you.
@@ -46,7 +52,7 @@ Your rebound camera toggle also works. Entering or leaving Street View preserves
 
 Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. In the prepared 1.0.1 build, photo loading and short control hints appear in stacked lines above the bottom-left map credits. The larger white arrows turn yellow when selected. Loading updates do not fill chat.
 
-`/earth actionbar` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
+`/earth hud` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
 
 Street View uses fixed daylight and softly shaded blocks. Lighting in a 360-degree photograph cannot react to placed torches or match every shadow exactly. The photo dimension uses a vanilla Iris pipeline; Earth exploration keeps your chosen shaders.
 

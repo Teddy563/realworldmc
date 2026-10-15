@@ -48,6 +48,15 @@ public final class StreetPhysicsTests implements FabricGameTest {
             var parsed=commands.parse(command,source);
             test.assertTrue(!parsed.getReader().canRead() && parsed.getContext().getLastChild().getCommand()!=null,"Server must accept command: "+command);
         }
+        for(String root:java.util.List.of("earth","rw")) for(String mode:java.util.List.of("fly","hud")) for(String suffix:java.util.List.of(""," on"," off")) {
+            String command=root+" "+mode+suffix;
+            var parsed=commands.parse(command,source);
+            test.assertTrue(!parsed.getReader().canRead() && parsed.getContext().getLastChild().getCommand()!=null,"Flight autocomplete must accept: "+command);
+        }
+        for(String root:java.util.List.of("earth","rw")) for(String removed:java.util.List.of("glide","actionbar")) {
+            var parsed=commands.parse(root+" "+removed,source);
+            test.assertTrue(parsed.getReader().canRead(),"Removed command must be rejected: "+removed);
+        }
         for(String root:java.util.List.of("earth","rw")) for(int view:new int[]{1,2,3}) {
             try {commands.execute(root+" camera "+view,source);test.assertTrue(false,"Removed camera command must be rejected");}
             catch(com.mojang.brigadier.exceptions.CommandSyntaxException expected) {}

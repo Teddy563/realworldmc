@@ -64,6 +64,8 @@ public final class PanoramaRenderer {
     }
     public boolean active(){var level=Minecraft.getInstance().level;return session && level!=null && level.dimension().equals(PanoramaRoom.ROOM);}
     public boolean walking(){return walking;}
+    /** Reuse the existing arrow bindings; duplicate registrations would steal photo navigation keys. */
+    public KeyMapping flightSpeedKey(boolean faster) { return movement[faster ? 0 : 1]; }
     public double groundY(){return groundY;}
     public void clear(){
         generation++;session=false;loading=false;metadata=null;status="";report="";copyright="";forwardWasDown=false;

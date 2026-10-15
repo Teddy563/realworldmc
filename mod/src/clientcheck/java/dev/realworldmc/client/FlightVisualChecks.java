@@ -74,7 +74,7 @@ final class FlightVisualChecks {
             var model=((net.minecraft.client.renderer.entity.player.PlayerRenderer)renderer).getModel();
             model.setupAnim(player,0,0,0,0,0);
             if(model.rightArm.xRot>-2.5f || model.leftArm.xRot>-2.2f)throw new AssertionError("Superman arms must lead the ascent");
-            command("earth actionbar off");
+            command("earth hud off");
             if(EarthConfig.get().actionBar || !ActionBar.hidden(RWMessages.message("flight")) || ActionBar.hidden(Component.literal("Vanilla message")))throw new AssertionError("Actionbar toggle affected the wrong messages");
             Component vanilla=Component.literal("Vanilla overlay check");mc.gui.setOverlayMessage(vanilla,false);
             var overlay=java.util.Arrays.stream(mc.gui.getClass().getDeclaredFields()).filter(f -> {
@@ -83,7 +83,7 @@ final class FlightVisualChecks {
             }).findFirst().orElseThrow();
             mc.gui.setOverlayMessage(RWMessages.message("hidden"),false);
             if(overlay.get(mc.gui)!=vanilla)throw new AssertionError("Hidden RW overlay replaced vanilla information");
-            command("rw actionbar");
+            command("rw hud");
             Component visible=RWMessages.message("visible");mc.gui.setOverlayMessage(visible,false);
             if(!EarthConfig.get().actionBar || overlay.get(mc.gui)!=vanilla)throw new AssertionError("RW corner status must preserve vanilla overlays");
             var status=ActionBar.class.getDeclaredField("status");status.setAccessible(true);

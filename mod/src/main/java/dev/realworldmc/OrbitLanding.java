@@ -10,7 +10,7 @@ import java.util.function.BiConsumer;
 
 /** Re-enter the real region below an orbital view before resuming normal Creative flight. */
 public final class OrbitLanding {
-    public record Arrival(EarthRegions.Region region, Vec3 position) {}
+    public record Arrival(EarthRegions.Region region, Vec3 position, TravelLoading loading) {}
     private OrbitLanding() {}
     public static void begin(ServerPlayer player, double[] location, float yaw, float pitch,
                              BooleanSupplier valid, BiConsumer<Arrival,Throwable> finished) {
@@ -35,7 +35,7 @@ public final class OrbitLanding {
                 if (!Double.isFinite(ground)) throw new IllegalStateException("Destination height unavailable");
                 server.execute(() -> {
                     try {
-                        if (!loading.active() || !valid.getAsBoolean() || player.isRemoved() || player.level() != server.overworld()) return;
+                        if (!loading.active() || !valid.getAsBoolean() || player.isRemoved() || player.level() != server.overworld()) { loading.close(); finished.accept(null,new IllegalStateException("Descent cancelled")); return; }
                         loading.stage("Loading arrival terrain", 2);
                         var region = existing != null ? existing : EarthRegions.add(location[0], location[1], ground);
                         var local = Geo.geodeticToMc(region.latitude(), region.longitude(), region.groundHeight(), location[0], location[1], Math.max(location[2], ground + 400));
@@ -46,9 +46,8 @@ public final class OrbitLanding {
                         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,new RegionsPayload(EarthRegions.all()));
                         player.teleportTo(server.overworld(), region.offsetX()+local[0], local[1], region.offsetZ()+local[2], yaw, pitch);
                         player.setDeltaMovement(Vec3.ZERO);
-                        finished.accept(new Arrival(region,player.position()),null);
-                    } catch (Throwable failure) { finished.accept(null,failure); }
-                    finally { loading.close(); }
+                        finished.accept(new Arrival(region,player.position(),loading),null);
+                    } catch (Throwable failure) { loading.close(); finished.accept(null,failure); }
                 });
             } catch (Throwable failure) {
                 server.execute(() -> { loading.close(); if (valid.getAsBoolean()) finished.accept(null,failure); });

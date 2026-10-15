@@ -17,6 +17,7 @@ The integration preserves the contributor's commits. Merge the corrected 1.0.2 c
 
 - All 29 service tests passed, including a failed-tile retry regression check.
 - The stable 1.21.1 build and its 10 GameTests passed, together with runtime, bundle, 31 setup, 19 navigation and 100-spawn checks.
+- The disposable 1.21.1 client check (`mod/gradlew.bat -p mod runCreativeFlightCheck`) passed equipment-free fly toggles and /rw alias, 66 m/s movement, throttle, reverse/strafe, upright ascent/descent/hover, both camera views, normal rocket launch from a hover and expiry, block collision, anchored orbital movement with rockets, return and game-mode cleanup. The world uses synthetic regions and no provider keys. Optional recording-profile mods are not loaded by default. A separate compatibility run with Axiom 6.1.3, camera-directed flight, zero momentum and noclip reproduces the stuck-player regression before the hook-order fix and passes afterward. It also checks vanilla flight-speed changes and movement attributes. Use `-PphotoExtraModDir=<local-fixture-folder> -x runGameTest` after creating the disposable GameTest world; third-party test JARs are not distributed.
 - The experimental 26.2 and 26.3 builds passed their runtime, bundle and spawn checks.
 - The 26.3 disposable client started and rendered a synthetic tile through the actual map renderer. GPU readback confirmed the expected color. This checks shader compilation, texture/vertex upload and draw submission without a world or provider key.
 - Node discovery checks passed locally on Windows. The workflow also runs them on macOS and Linux; use the candidate's Actions run to confirm those results before merging.
@@ -29,6 +30,6 @@ The release workflow repeats the standalone JAR and clean-pack checks. All build
 - Full gameplay on macOS and Linux, especially a GUI launcher with a minimal PATH.
 - 26.3 world generation, real streamed terrain, mining/masking, save/reload and browser Street View.
 - Propwash's Fabric 26.3 build: drone view, scenery beyond the pilot, collision, leaving the goggles, recording and shaders. Propwash is not bundled or certified compatible yet.
-- The known Bliss blank-view issue after returning from Earth orbit remains unresolved. This update does not change stable orbital rendering.
+- The known Bliss blank-view issue after returning from Earth orbit remains unresolved. The new glide/fly controls do not fix that shader issue.
 
 Use a separate 26.3 test profile and a new world. Personal keys, worlds, controls and optional recording mods are not changed by this preparation. No provider requests are needed by the automated checks.

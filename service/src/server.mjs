@@ -165,12 +165,12 @@ export class EarthService {
     return out;
   }
 
-  async renderSelect(frame, cam, space = false) {
+  async renderSelect(frame, cam, space = false, ahead = [0, 0]) {
     const r = space ? spaceRenderOptions(this.cfg.render, spaceAltitude(frame, cam)) : this.cfg.render;
     const sseFactor = r.viewportHeight / (2 * Math.tan((r.fovDeg * Math.PI) / 360));
     const { tiles, pending } = await selectRenderTiles(this.client, frame, cam, {
       maxSse: r.maxSse, sseFactor, far: r.far, fineRadius: r.fineRadius, targetError: this.cfg.collisionError,
-      maxTiles: r.maxTiles, falloff: r.falloff,
+      maxTiles: r.maxTiles, falloff: r.falloff, ahead: space ? [0, 0] : ahead,
     });
     const attribution = new Set();
     for (const t of tiles) {
@@ -315,7 +315,7 @@ export function createServer(service) {
         }
         case '/render/select': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));
-          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')], q.get('space') === '1'));
+          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')], q.get('space') === '1', [q.has('aheadX') ? num(q, 'aheadX') : 0, q.has('aheadZ') ? num(q, 'aheadZ') : 0]));
         }
         case '/render/tile': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));

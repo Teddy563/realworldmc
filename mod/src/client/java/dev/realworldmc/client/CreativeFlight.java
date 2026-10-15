@@ -26,7 +26,17 @@ public final class CreativeFlight {
     public static boolean gliding() { return glide; }
     public static boolean posed(Entity entity) { return enabled() && entity == Minecraft.getInstance().player; }
     public static FlightPose pose() { return pose; }
-    public static double speedFactor() { return enabled() ? speed / MAX_SPEED * (FlightBoost.boosted() ? 1.5 : 1) : 1; }
+    public static double speedFactor() { return enabled() ? speed / MAX_SPEED * movementMultiplier() * (FlightBoost.boosted() ? 1.5 : 1) : 1; }
+    private static double movementMultiplier() {
+        var player = Minecraft.getInstance().player;
+        if (player == null) return 1;
+        // Axiom adjusts vanilla flying speed; effects and movement mods use this attribute.
+        double flying = player.getAbilities().getFlyingSpeed() / .05f;
+        double base = player.getAttributeBaseValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        double effects = base > 0 ? player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) / base : 1;
+        double multiplier = flying * effects;
+        return Double.isFinite(multiplier) ? Math.clamp(multiplier, 0, 8) : 1;
+    }
     public static int rocketForward(int forward, int right, int vertical) {
         return enabled() && FlightBoost.boosted() && forward == 0 && right == 0 && vertical == 0 ? 1 : forward;
     }

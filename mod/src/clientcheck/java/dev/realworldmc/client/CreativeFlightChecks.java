@@ -94,18 +94,19 @@ final class CreativeFlightChecks {
                     require(mc.player.getDeltaMovement().length()<.01,"Release must settle to hover");
                     require(!CreativeFlight.gliding() && Math.abs(CreativeFlight.pose().pitch(1))<.2,"Automatic upright hover");
                     require(CreativeFlight.speedFactor()<.5,"Down arrow must reduce throttle");
-                    release(mc);mc.options.keyUp.setDown(true);next();
+                    release(mc);mc.player.getAbilities().setFlyingSpeed(.1f);mc.options.keyUp.setDown(true);next();
                 }
                 case 3 -> {
-                    require(mc.player.getDeltaMovement().length()<1.6 && mc.player.getDeltaMovement().length()>1.3,"Reduced cruise speed");
-                    PanoramaRenderer.INSTANCE.flightSpeedKey(true).setDown(true);next();
+                    require(mc.player.getDeltaMovement().length()<3.2 && mc.player.getDeltaMovement().length()>2.6,"Axiom-style flying speed must scale actual cruise");
+                    mc.player.getAbilities().setFlyingSpeed(.05f);PanoramaRenderer.INSTANCE.flightSpeedKey(true).setDown(true);next();
                 }
                 case 4 -> {
                     require(CreativeFlight.speedFactor()==1,"Up arrow must restore bounded maximum throttle");
-                    release(mc);mc.options.keyRight.setDown(true);next();
+                    release(mc);mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("realworldmc", "flight_check"), .4, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));mc.options.keyRight.setDown(true);next();
                 }
                 case 5 -> {
-                    require(mc.player.getDeltaMovement().x>3,"Right strafe failed");
+                    require(mc.player.getDeltaMovement().x>4.5 && mc.player.getDeltaMovement().x<4.8,"Movement-speed modifier must scale strafe");
+                    mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).removeModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("realworldmc", "flight_check"));
                     release(mc);mc.options.keyDown.setDown(true);next();
                 }
                 case 6 -> {

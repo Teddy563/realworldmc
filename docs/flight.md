@@ -17,7 +17,7 @@ Use a **Creative, singleplayer Real World world on Minecraft 1.21.1**. These con
 | Use a firework rocket | Temporary boost; from a hover it launches you forward |
 | F5 | Normal camera toggle; your rebound camera key also works |
 
-The starting and maximum local cruise target is **66 metres per second**, roughly twice vanilla rocket-assisted level elytra flight. Vanilla elytra speed varies with pitch. Arrow keys reduce that target as low as 4 m/s, or restore it. A rocket temporarily boosts the selected speed by 50%, up to 99 m/s. Acceleration is gradual and diagonal movement does not exceed the selected limit.
+The starting and maximum local cruise target is **66 metres per second**, roughly twice vanilla rocket-assisted level elytra flight. Vanilla elytra speed varies with pitch. Arrow keys reduce that target as low as 4 m/s, or restore it. A rocket temporarily boosts the selected speed by 50%, up to 99 m/s. Acceleration is gradual and diagonal movement does not exceed the selected limit. Axiom's vanilla flight-speed setting and movement-speed attributes (including Speed and Slowness effects) also scale flight, up to an 8x combined multiplier before rockets. While enabled, RealWorldMC controls acceleration and steering; turn it off to return to Axiom's normal flight behavior.
 
 Rockets use their normal item, flight duration, sounds and explosion behaviour. They are optional. No armour is equipped or removed, and turning flight off restores ordinary Creative controls without making you fall. Block collision still applies. F5, camera-distance mods and optical zoom keep their normal controls.
 

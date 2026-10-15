@@ -26,7 +26,7 @@ public final class GlobeOrbit {
     }
     public void tick(double altitude, float yaw, int forward, int right, double radius, double speedMultiplier) {
         previous.set(rotation);
-        double rate = Math.min(500_000, Math.max(2, altitude * .055)) * Math.clamp(speedMultiplier, 0, 1.5) / Math.max(1,Math.hypot(forward,right));
+        double rate = Math.min(500_000, Math.max(2, altitude * .055)) * Math.clamp(speedMultiplier, 0, 12) / Math.max(1,Math.hypot(forward,right));
         speed += (forward * rate - speed) * .3;
         sideSpeed += (right * rate - sideSpeed) * .3;
         if (forward == 0 && Math.abs(speed) < .01) speed = 0;

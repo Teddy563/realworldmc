@@ -2,6 +2,7 @@
 
 ## 1.0.2 - prepared for testing, 2026-10-15
 
+- Fix flight movement being intercepted by Axiom. Respect vanilla flight speed and movement-speed modifiers.
 - Add `/earth glide` and `/earth fly`, with `/rw` aliases and on/off toggles, for Creative singleplayer on 1.21.1. Both commands enable the same automatic flight: accelerate into an elytra-style pose without equipment, then slow into upright hovering.
 - Add smooth WASD movement, arrow-key throttle, Space/Shift ascent/descent, hovering, normal firework boosts and block collision. Reuse the anchored orbital view for stable globe travel and preserve ordinary camera/zoom controls.
 - Integrate the Node runtime discovery contribution from PR #2, with Node 22+ validation, PATH priority, numeric NVM ordering, custom NVM_DIR support and bounded probes.

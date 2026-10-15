@@ -143,7 +143,8 @@ final class CreativeFlightChecks {
                 }
                 case 12 -> { mc.player.setYRot(0);mc.player.setXRot(0);command("rw glide on");mc.options.keyUp.setDown(true);next(); }
                 case 13 -> {
-                    require(mc.player.getZ()<9.71 && mc.player.getZ()>8,"Powered flight clipped through blocks");
+                    if (mc.player.noPhysics) require(mc.player.getZ()>70,"Axiom noclip must still allow flight through blocks");
+                    else require(mc.player.getZ()<9.71 && mc.player.getZ()>8,"Powered flight clipped through blocks");
                     server(mc,p->require(p.getAbilities().flying,"Flight ability must remain synchronized after starting on the ground"));
                     release(mc);command("rw glide off");
                     server(mc,p->{dev.realworldmc.EarthRegions.unload();dev.realworldmc.EarthRegions.add(44.4,26.1,120);p.teleportTo(0,2200,0);});next();

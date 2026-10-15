@@ -29,8 +29,8 @@ public final class SpaceFlight {
     public static boolean enabled() { return enabled; }
     public static CelestialBody body() { return body; }
     public static boolean anchored() { return enabled && anchored; }
-    public static boolean posed(net.minecraft.world.entity.Entity entity) { return enabled && entity == Minecraft.getInstance().player; }
-    public static FlightPose pose() { return pose; }
+    public static boolean posed(net.minecraft.world.entity.Entity entity) { return (enabled || CreativeFlight.enabled()) && entity == Minecraft.getInstance().player; }
+    public static FlightPose pose() { return CreativeFlight.enabled() ? CreativeFlight.pose() : pose; }
     public static org.joml.Quaterniond orbitRotation(float partial) { return enabled ? activeOrbit().rotation(partial) : new org.joml.Quaterniond(); }
     private static GlobeOrbit activeOrbit() { return body==CelestialBody.EARTH ? orbit : planetaryOrbit; }
     public static Vec3 mapCamera(Vec3 camera, EarthRegions.Region region, float partial) {
@@ -162,25 +162,27 @@ public final class SpaceFlight {
         int direction = (mc.options.keyJump.isDown() ? 1 : 0) - (mc.options.keyShift.isDown() ? 1 : 0);
         int forward = (mc.options.keyUp.isDown() ? 1 : 0) - (mc.options.keyDown.isDown() ? 1 : 0);
         int right=(mc.options.keyRight.isDown()?1:0)-(mc.options.keyLeft.isDown()?1:0);
+        forward=CreativeFlight.rocketForward(forward,right,direction);
         pose.tick(forward,right,direction,mc.player.getYRot());
         if(!anchored && physicalHeight(mc)>=EarthConfig.get().spaceEntryHeight()) {
             anchored=true;height=previousHeight=physicalHeight(mc);mc.player.setDeltaMovement(Vec3.ZERO);
         }
         double currentHeight=altitude();
-        verticalVelocity+=(direction*verticalSpeed(currentHeight)-verticalVelocity)*.2;
+        double lift = Math.clamp(direction - (CreativeFlight.gliding() ? Math.sin(Math.toRadians(mc.player.getXRot())) * forward : 0), -1, 1);
+        verticalVelocity+=(lift*verticalSpeed(currentHeight)*CreativeFlight.speedFactor()-verticalVelocity)*.2;
         if(direction==0 && Math.abs(verticalVelocity)<.01)verticalVelocity=0;
         if (anchored) {
             previousHeight=height;
             double floor=body==CelestialBody.EARTH ? exitHeight()-50 : body.minimumAltitude;
             height=Math.clamp(height+verticalVelocity,floor,20_000_000);
             if(height==floor || height==20_000_000)verticalVelocity=0;
-            activeOrbit().tick(height,mc.player.getYRot(),forward,right,body.radius);
+            activeOrbit().tick(height,mc.player.getYRot(),forward,right,body.radius,CreativeFlight.speedFactor());
             // Geographic altitude changes; Steve stays at a stable Minecraft position for filming.
             mc.player.setDeltaMovement(Vec3.ZERO);
-            if(body==CelestialBody.EARTH && direction<0 && height<=exitHeight())beginLanding(mc);
+            if(body==CelestialBody.EARTH && lift<0 && height<=exitHeight())beginLanding(mc);
         } else {
             double yaw = Math.toRadians(mc.player.getYRot());
-            double cruise=Math.min(12,Math.max(.4,currentHeight/100))/Math.max(1,Math.hypot(forward,right));
+            double cruise=Math.min(12,Math.max(.4,currentHeight/100))*CreativeFlight.speedFactor()/Math.max(1,Math.hypot(forward,right));
             double movement=Math.clamp(verticalVelocity,mc.level.getMinBuildHeight()+2-mc.player.getY(),20_000_000-mc.player.getY());
             mc.player.setDeltaMovement((-Math.sin(yaw)*forward+Math.cos(yaw)*right)*cruise,movement,(Math.cos(yaw)*forward+Math.sin(yaw)*right)*cruise);
         }

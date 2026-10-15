@@ -13,6 +13,8 @@ Earth flight stays in the same world and uses the same Google 3D tiles, includin
 
 While orbit is active, local Minecraft terrain, other entities, block entities, particles and world-border effects are hidden. The launch world stays saved and appears again when you return. The crosshair cannot mine or target invisible Earth objects from the orbital view.
 
+With `/earth glide` or `/earth fly` enabled, [the selected flight pose, speed controls and rocket boosts](flight.md) also apply in orbit. Turning either mode off restores the default space controls.
+
 Steve's pose follows the movement keys, independently of where you look. Space raises both arms for an upright climb. Shift tips the body into a downward dive. Forward cruise uses a one-arm-leading pose, and releasing the controls relaxes into a hover. No elytra or equipment changes are needed.
 
 Entering space keeps the current map tiles. During a detail swap, loaded scenery stays visible until new tiles or coarse parents are available. A geographic handoff retains the last visible tiles in the correct position until the destination loads. In `config/realworldmc.json`, `autoSpaceFlight` enables automatic entry and `spaceEntryHeight` sets the height in metres (2,000 to 100,000; default 2,000). Restart after editing. The exit height is 80% of the entry height to prevent repeated switching near the boundary.

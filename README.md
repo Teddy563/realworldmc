@@ -11,6 +11,7 @@ Explore real cities, fly over mountains and step into Google Maps Street View in
 ## What you can do
 
 - Fly over real-world 3D scenery and travel to places by name or coordinates.
+- Use [glide or upright flight](docs/flight.md) without wearing an elytra.
 - Explore Street View, follow its arrows, place blocks and spawn mobs.
 - Start each new world at one of [100 locations](docs/spawn-locations.md), including the Palace of Parliament in Bucharest.
 - Try [experimental space flight](docs/space-flight.md), including Earth orbit and Moon or Mars flyovers. Moon and Mars do not have walkable surfaces.
@@ -33,6 +34,7 @@ Windows x64 releases include the service runtime. macOS and Linux need Node.js 2
 |---|---|
 | `/earth help` | Show commands |
 | `/earth setup` | Change or test your keys |
+| `/earth glide` / `/earth fly` | Toggle glide or upright flight |
 | `/earth goto 44.427454, 26.087287` | Visit the Palace of Parliament |
 | `/earth streetview` | Enter the nearest Street View photo |
 | `/earth back` | Return from Street View |

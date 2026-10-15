@@ -156,3 +156,31 @@ tasks.register('nodeRuntimeChecks', JavaExec) {
     mainClass = 'dev.realworldmc.NodeRuntimeChecks'
 }
 tasks.named('check') { dependsOn tasks.named('nodeRuntimeChecks') }
+
+// Offline integrated-client flight check. Never packages the test entrypoint or world.
+loom.runs {
+    creativeFlightCheck {
+        client()
+        source sourceSets.clientcheck
+        runDir 'run-flight-check'
+        vmArg '-Drealworldmc.creativeFlightCheck=true'
+        programArg '--width'
+        programArg '640'
+        programArg '--height'
+        programArg '480'
+    }
+}
+tasks.named('runCreativeFlightCheck') {
+    dependsOn tasks.named('runGameTest')
+    doFirst {
+        delete layout.projectDirectory.file('run-flight-check/creative-flight-result.txt')
+        copy {
+            from layout.buildDirectory.dir('run/gameTest/world')
+            into layout.projectDirectory.dir('run-flight-check/saves/creative-flight-check')
+        }
+    }
+    doLast {
+        def result = layout.projectDirectory.file('run-flight-check/creative-flight-result.txt').asFile
+        if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Flight check did not finish')
+    }
+}

@@ -99,6 +99,8 @@ public class RealWorldMC implements ModInitializer {
                 .then(Commands.literal("actionbar").executes(ctx -> actionBarHelp(ctx.getSource()))
                     .then(Commands.literal("on").executes(ctx -> actionBarHelp(ctx.getSource())))
                     .then(Commands.literal("off").executes(ctx -> actionBarHelp(ctx.getSource()))))
+                .then(flightCommand("glide"))
+                .then(flightCommand("fly"))
                 .then(Commands.literal("space").executes(ctx -> spaceHelp(ctx.getSource()))
                     .then(Commands.literal("on").executes(ctx -> spaceHelp(ctx.getSource())))
                     .then(Commands.literal("off").executes(ctx -> spaceHelp(ctx.getSource())))
@@ -148,6 +150,15 @@ public class RealWorldMC implements ModInitializer {
 	}
 
 
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> flightCommand(String mode) {
+        com.mojang.brigadier.Command<CommandSourceStack> help = ctx -> {
+            ctx.getSource().sendSuccess(() -> RWMessages.message("Use the updated 1.21.1 client in a Creative, singleplayer Real World world. /earth " + mode + " toggles it; add on or off. WASD moves, arrow up/down changes speed, Space/Shift rises and descends. Rockets boost."), false);
+            return 1;
+        };
+        return Commands.literal(mode).executes(help)
+            .then(Commands.literal("on").executes(help)).then(Commands.literal("off").executes(help));
+    }
+
     private static int spaceHelp(CommandSourceStack src) {
         src.sendSuccess(() -> RWMessages.message("Creative flight enters space automatically above 2 km by default. /earth space starts early. W/S cruise, A/D strafe, mouse steers, Space/Shift rise and descend. /earth space return goes back; /earth actionbar toggles information."), false);
         return 1;
@@ -161,6 +172,8 @@ public class RealWorldMC implements ModInitializer {
     private static int help(CommandSourceStack src) {
         var help = RWMessages.message("RealWorldMC · click a command to fill chat")
             .append(RWMessages.helpLine("/earth setup", "Add or test your API keys"))
+            .append(RWMessages.helpLine("/earth glide", "Toggle fast flight with an elytra-style pose; no elytra needed"))
+            .append(RWMessages.helpLine("/earth fly", "Toggle upright flight and hovering"))
             .append(RWMessages.helpLine("/earth space", "Experimental Earth-to-space filming flight"))
             .append(RWMessages.helpLine("/rw moon", "Moon orbital flyover using NASA imagery"))
             .append(RWMessages.helpLine("/rw mars", "Mars orbital flyover using Viking imagery"))

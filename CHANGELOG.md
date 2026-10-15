@@ -2,6 +2,8 @@
 
 ## 1.0.2 - prepared for testing, 2026-10-15
 
+- Add `/earth glide` and `/earth fly`, with `/rw` aliases and on/off toggles, for Creative singleplayer on 1.21.1. Glide uses an elytra-style pose without equipment; fly keeps Steve upright.
+- Add smooth WASD movement, arrow-key throttle, Space/Shift ascent/descent, hovering, normal firework boosts and block collision. Reuse the anchored orbital view for stable globe travel and preserve ordinary camera/zoom controls.
 - Integrate the Node runtime discovery contribution from PR #2, with Node 22+ validation, PATH priority, numeric NVM ordering, custom NVM_DIR support and bounded probes.
 - Share the detector across stable and experimental builds; add Windows/macOS/Linux CI checks.
 - Keep the bundled-preview path fix. Exclude the unrelated preview UI, cache and material changes from that PR.

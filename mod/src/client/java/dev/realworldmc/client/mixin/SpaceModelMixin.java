@@ -21,6 +21,18 @@ public class SpaceModelMixin {
         var pose=SpaceFlight.pose();
         float partial=Mth.clamp(age-entity.tickCount,0,1), strength=pose.thrust(partial);
         float flutter=Mth.sin(age*.12f)*.035f, tilt=pose.pitch(partial);
+        if (dev.realworldmc.client.CreativeFlight.enabled()) {
+            // Elytra-like arms trail the body; hover keeps the upright, relaxed silhouette.
+            rightArm.xRot=leftArm.xRot=-.10f;
+            rightArm.yRot=leftArm.yRot=0;
+            rightArm.zRot=.08f+strength*.25f; leftArm.zRot=-rightArm.zRot;
+            rightLeg.xRot=.02f+flutter; leftLeg.xRot=-.02f-flutter;
+            rightLeg.yRot=leftLeg.yRot=rightLeg.zRot=leftLeg.zRot=0;
+            head.xRot=(float)Math.toRadians(Mth.clamp(headPitch-tilt,-80,65));
+            head.yRot=(float)Math.toRadians(Mth.clamp(Mth.wrapDegrees(entity.getYRot()-pose.yaw(partial)),-65,65));
+            hat.copyFrom(head);
+            return;
+        }
         // Both hands lead a vertical ascent/descent; one leads during horizontal cruise.
         float horizontal=(float)Math.sin(Math.toRadians(tilt));
         rightArm.xRot=Mth.lerp(strength,-.12f,-(float)Math.PI+.08f)+flutter;

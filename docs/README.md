@@ -2,7 +2,7 @@
 
 1. [Install the mod](setup.md).
 2. [Create map accounts, add keys and understand costs](accounts-and-costs.md).
-3. [Use the controls and commands](controls.md).
+3. [Use the controls and commands](controls.md), including [glide and upright flight](flight.md).
 4. [Understand the limitations](limitations.md).
 5. [Fix problems and update](troubleshooting.md).
 

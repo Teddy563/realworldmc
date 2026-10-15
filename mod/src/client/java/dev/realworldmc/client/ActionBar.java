@@ -37,10 +37,18 @@ public final class ActionBar {
     }
     public static List<String> flightControls() {
         var mc=Minecraft.getInstance();var controls=new ArrayList<String>();
+        if(CreativeFlight.enabled()) {
+            controls.add(CreativeFlight.status());
+            controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": forward / back · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
+            controls.add(key(PanoramaRenderer.INSTANCE.flightSpeedKey(true))+" / "+key(PanoramaRenderer.INSTANCE.flightSpeedKey(false))+": speed · "+key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            controls.add("/earth "+(CreativeFlight.gliding()?"glide":"fly")+": off · Rockets: boost");
+        }
         if(SpaceFlight.enabled()) {
             controls.add(String.format(java.util.Locale.ROOT,"%s orbit · %.1f km",SpaceFlight.body().title,SpaceFlight.altitude()/1000));
-            controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": cruise · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
-            controls.add(key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            if(!CreativeFlight.enabled()) {
+                controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": cruise · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
+                controls.add(key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
+            }
             controls.add("/earth space return: back");
             controls.add("/rw moon · /rw mars · /rw earth");
         }

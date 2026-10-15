@@ -17,6 +17,12 @@ These instructions are for **1.21.1**. On 26.2, Street View opens the browser co
 
 `/earth setlocation 44.427454 26.087287` changes the start for **new worlds** and requires command permission. Existing worlds keep their own origin.
 
+## Glide and fly
+
+`/earth glide` toggles equipment-free flight with an elytra-style pose. `/earth fly` toggles upright flight and hovering. Add `on` or `off` to either command; `/rw` works too. These modes require Creative singleplayer.
+
+W/S move forward/back, A/D strafe, arrow up/down changes speed, and Space/Shift rises/descends. Release movement keys to slow to a hover. Fireworks provide an optional boost. See [the flight guide](flight.md) for speeds, camera behaviour and globe transitions.
+
 ## Street View
 
 1. Run `/earth streetview` while standing or flying in an Earth location. It searches within 500 metres of you.

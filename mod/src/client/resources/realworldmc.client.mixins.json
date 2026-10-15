@@ -6,6 +6,7 @@
     "GameRendererMixin",
     "ClientLevelMixin",
     "KeyboardInputMixin",
+    "CreativeFlightMixin",
     "PhotoTerrainMixin",
     "PhotoColorMaskMixin",
     "PhotoCameraMixin",

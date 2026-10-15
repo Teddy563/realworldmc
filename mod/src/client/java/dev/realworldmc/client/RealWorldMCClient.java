@@ -14,6 +14,7 @@ public class RealWorldMCClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
         SetupScreen.register();
+        CreativeFlight.register();
         SpaceFlight.register();
         ClientTickEvents.END_CLIENT_TICK.register(SpaceDestinations::tick);
         ActionBar.register();

@@ -25,6 +25,7 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
     private PlanetTravelChecks planetCheck;
     private static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     @Override public void onInitializeClient(){
+        if(Boolean.getBoolean("realworldmc.creativeFlightCheck")) {new CreativeFlightChecks().register();return;}
         if(!Boolean.getBoolean("realworldmc.photoCheck"))return;
         ClientLifecycleEvents.CLIENT_STARTED.register(mc->GLFW.glfwHideWindow(mc.getWindow().getWindow()));
         ClientTickEvents.END_CLIENT_TICK.register(mc->{

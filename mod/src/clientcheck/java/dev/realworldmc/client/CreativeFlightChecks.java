@@ -68,7 +68,7 @@ final class CreativeFlightChecks {
                 if(!mc.player.isCreative() || Math.abs(mc.player.getY()-160)>1)return;
                 mc.setScreen(null); mc.player.setYRot(0);mc.player.setXRot(0);
                 MapRenderer.INSTANCE.setRegions(new RegionsPayload(java.util.List.of()));
-                command("earth glide"); require(CreativeFlight.gliding(),"Glide toggle");
+                command("earth glide"); require(CreativeFlight.enabled() && !CreativeFlight.gliding(),"Start upright");
                 mc.options.keyUp.setDown(true); next(); return;
             }
             if(stage==10) { sawBoost |= FlightBoost.boosted(); boostedSpeed=Math.max(boostedSpeed,mc.player.getDeltaMovement().length()); }
@@ -92,6 +92,7 @@ final class CreativeFlightChecks {
                 }
                 case 2 -> {
                     require(mc.player.getDeltaMovement().length()<.01,"Release must settle to hover");
+                    require(!CreativeFlight.gliding() && Math.abs(CreativeFlight.pose().pitch(1))<.2,"Automatic upright hover");
                     require(CreativeFlight.speedFactor()<.5,"Down arrow must reduce throttle");
                     release(mc);mc.options.keyUp.setDown(true);next();
                 }
@@ -109,7 +110,7 @@ final class CreativeFlightChecks {
                 }
                 case 6 -> {
                     require(mc.player.getDeltaMovement().z<-3,"Backward flight failed");
-                    release(mc);command("rw fly"); require(CreativeFlight.enabled() && !CreativeFlight.gliding(),"Mutually exclusive fly alias");
+                    release(mc);command("rw fly on"); require(CreativeFlight.enabled(),"Idempotent alias");
                     reference=mc.player.getY();mc.options.keyJump.setDown(true);next();
                 }
                 case 7 -> {
@@ -156,7 +157,7 @@ final class CreativeFlightChecks {
                 case 16 -> {
                     require(mc.player.position().distanceTo(anchor)<.1,"Orbit moved physical player");
                     require(SpaceFlight.altitude()>reference+100 && !SpaceFlight.orbitRotation(1).equals(new org.joml.Quaterniond(),1e-8),"Orbit flight did not move geographic view");
-                    require(SpaceFlight.pose().pitch(1)<.1,"Fly should stay upright in orbit");
+                    require(CreativeFlight.gliding() && SpaceFlight.pose().pitch(1)>40,"Automatic glide in orbit");
                     release(mc);command("earth glide on");mc.options.keyUp.setDown(true);mc.player.setXRot(0);
                     require(mc.gameMode.useItem(mc.player,InteractionHand.MAIN_HAND).consumesAction(),"Orbital rocket launch");next();
                 }

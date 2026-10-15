@@ -41,7 +41,7 @@ public final class ActionBar {
             controls.add(CreativeFlight.status());
             controls.add(key(mc.options.keyUp)+" / "+key(mc.options.keyDown)+": forward / back · "+key(mc.options.keyLeft)+" / "+key(mc.options.keyRight)+": strafe");
             controls.add(key(PanoramaRenderer.INSTANCE.flightSpeedKey(true))+" / "+key(PanoramaRenderer.INSTANCE.flightSpeedKey(false))+": speed · "+key(mc.options.keyJump)+" / "+key(mc.options.keyShift)+": up / down");
-            controls.add("/earth "+(CreativeFlight.gliding()?"glide":"fly")+": off · Rockets: boost");
+            controls.add("/earth fly: off · Rockets: boost");
         }
         if(SpaceFlight.enabled()) {
             controls.add(String.format(java.util.Locale.ROOT,"%s orbit · %.1f km",SpaceFlight.body().title,SpaceFlight.altitude()/1000));

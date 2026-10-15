@@ -172,8 +172,8 @@ public class RealWorldMC implements ModInitializer {
     private static int help(CommandSourceStack src) {
         var help = RWMessages.message("RealWorldMC · click a command to fill chat")
             .append(RWMessages.helpLine("/earth setup", "Add or test your API keys"))
-            .append(RWMessages.helpLine("/earth glide", "Toggle fast flight with an elytra-style pose; no elytra needed"))
-            .append(RWMessages.helpLine("/earth fly", "Toggle upright flight and hovering"))
+            .append(RWMessages.helpLine("/earth glide", "Alias for automatic flight; no elytra needed"))
+            .append(RWMessages.helpLine("/earth fly", "Toggle automatic glide while moving and upright hover"))
             .append(RWMessages.helpLine("/earth space", "Experimental Earth-to-space filming flight"))
             .append(RWMessages.helpLine("/rw moon", "Moon orbital flyover using NASA imagery"))
             .append(RWMessages.helpLine("/rw mars", "Mars orbital flyover using Viking imagery"))

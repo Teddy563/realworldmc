@@ -168,7 +168,7 @@ public final class SpaceFlight {
             anchored=true;height=previousHeight=physicalHeight(mc);mc.player.setDeltaMovement(Vec3.ZERO);
         }
         double currentHeight=altitude();
-        double lift = Math.clamp(direction - (CreativeFlight.gliding() ? Math.sin(Math.toRadians(mc.player.getXRot())) * forward : 0), -1, 1);
+        double lift = Math.clamp(direction - (CreativeFlight.enabled() ? Math.sin(Math.toRadians(mc.player.getXRot())) * forward : 0), -1, 1);
         verticalVelocity+=(lift*verticalSpeed(currentHeight)*CreativeFlight.speedFactor()-verticalVelocity)*.2;
         if(direction==0 && Math.abs(verticalVelocity)<.01)verticalVelocity=0;
         if (anchored) {

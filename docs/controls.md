@@ -19,7 +19,7 @@ These instructions are for **1.21.1**. On 26.2, Street View opens the browser co
 
 ## Glide and fly
 
-`/earth glide` toggles equipment-free flight with an elytra-style pose. `/earth fly` toggles upright flight and hovering. Add `on` or `off` to either command; `/rw` works too. These modes require Creative singleplayer.
+`/earth fly` toggles equipment-free flight. Steve automatically glides while moving quickly and stands upright when hovering or moving straight up/down. `/earth glide` enables the same mode. Add `on` or `off` to either command; `/rw` works too. These modes require Creative singleplayer.
 
 W/S move forward/back, A/D strafe, arrow up/down changes speed, and Space/Shift rises/descends. Release movement keys to slow to a hover. Fireworks provide an optional boost. See [the flight guide](flight.md) for speeds, camera behaviour and globe transitions.
 

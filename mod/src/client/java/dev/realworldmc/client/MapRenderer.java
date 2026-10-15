@@ -174,10 +174,15 @@ public final class MapRenderer {
 		EarthRegions.Region o = region;
 		int myEpoch = epoch;
         boolean space=SpaceFlight.anchored();
+        // Predict one second of local travel, bounded to avoid distant requests after teleports.
+        Vec3 motion=mc.player==null || space ? Vec3.ZERO : mc.player.getDeltaMovement();
+        Vec3 ahead=new Vec3(motion.x,0,motion.z).scale(20);
+        if(ahead.length()>256)ahead=ahead.normalize().scale(256);
+        final Vec3 lookAhead=ahead;
 		selector.execute(() -> {
 			try {
-				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d",
-					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0);
+				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d&aheadX=%.2f&aheadZ=%.2f",
+					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0, lookAhead.x, lookAhead.z);
 				JsonObject res = ServiceClient.getJson(q, Duration.ofSeconds(30));
 				if (myEpoch != epoch) return;
 				List<Want> list = new ArrayList<>();
@@ -298,7 +303,7 @@ public final class MapRenderer {
             // Keep the last complete view until replacement children or coarse covers are ready.
             // Never paint overlapping parent/child LODs, which causes depth flicker.
             if(coveredAll || displayed.isEmpty())displayed=new ArrayList<>(draw);
-            if(coveredAll)releaseRetained();
+            if(coveredAll) {releaseRetained(); if(!SpaceFlight.enabled())SpaceFlight.terrainReady();}
 			for (Integer id : displayed) lastDrawn.put(id, frame);
 
 			// Keep recently drawn tiles around (turning back must not reload), evict the oldest beyond the budget.
@@ -329,6 +334,9 @@ public final class MapRenderer {
         if (!SpaceView.active() || !active(ctx.world())) return;
         double altitude=SpaceFlight.altitude(ctx.tickCounter().getGameTimeDeltaPartialTick(false));
         SpaceView.sky(ctx.positionMatrix(),ctx.projectionMatrix(),SpaceFlight.body()==CelestialBody.EARTH?altitude:100_000);
+        // Orbital projection cannot compare depth written with the local-world projection.
+        RenderSystem.depthMask(true);
+        RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         if(SpaceFlight.body()==CelestialBody.EARTH)draw(ctx,true);
         else PlanetRenderer.render(ctx);
         SpaceDestinations.project(ctx);

@@ -1,7 +1,11 @@
 # Changelog
 
-## 1.0.2 - prepared for testing, 2026-10-15
+## 1.0.2 (2026-10-16)
 
+- Clear local projection depth before drawing orbit and improve orbital depth precision to reduce terrain z-fighting.
+- Keep descent progress until destination terrain is drawable, tolerate small arrival movement and recover from a stalled handoff. Rename the information toggle to `/earth hud` (also `/rw hud`); remove the redundant `/earth glide` command.
+- Correct left/right flight input, retain the local third-person player while chunk meshes rebuild, and smooth orbital speed across the atmosphere boundary.
+- Select terrain ahead of local flight using one second of horizontal velocity, capped at 256 metres, while preserving current coverage and the existing tile budget.
 - Fix flight movement being intercepted by Axiom. Respect vanilla flight speed and movement-speed modifiers.
 - Add `/earth glide` and `/earth fly`, with `/rw` aliases and on/off toggles, for Creative singleplayer on 1.21.1. Both commands enable the same automatic flight: accelerate into an elytra-style pose without equipment, then slow into upright hovering.
 - Add smooth WASD movement, arrow-key throttle, Space/Shift ascent/descent, hovering, normal firework boosts and block collision. Reuse the anchored orbital view for stable globe travel and preserve ordinary camera/zoom controls.

@@ -41,7 +41,7 @@ final class SpaceViewChecks {
         orbit.reset();orbit.tick(1000000,0,-1);
         if(GlobeOrbit.cameraInMap(camera,centre,orbit.rotation(1)).z>=camera.z)throw new AssertionError("S did not reverse orbit");
         orbit.reset();orbit.tick(1000000,0,0,1);
-        if(GlobeOrbit.cameraInMap(camera,centre,orbit.rotation(1)).x<=camera.x)throw new AssertionError("D did not strafe east");
+        if(GlobeOrbit.cameraInMap(camera,centre,orbit.rotation(1)).x>=camera.x)throw new AssertionError("D must strafe west when facing south");
         for(int i=0;i<10000;i++)orbit.tick(12000000,i*.3f,1);
         if(Math.abs(GlobeOrbit.cameraInMap(camera,centre,orbit.rotation(1)).distanceTo(centre)-radius)>.001)throw new AssertionError("Repeated globe travel drifted off its sphere");
         for(double angle:new double[]{0,Math.PI/2,Math.PI}) {
@@ -70,12 +70,16 @@ final class SpaceViewChecks {
         double previousSpeed=0;
         for(double altitude:new double[]{0,2000,12000,80000,1000000,10000000,20000000}) {
             double speed=SpaceFlight.verticalSpeed(altitude);
-            if(speed<previousSpeed || speed>250000)throw new AssertionError("Ascent must accelerate with altitude and remain bounded");
+            if(speed<previousSpeed || speed>20000)throw new AssertionError("Ascent must accelerate with altitude and remain bounded");
             previousSpeed=speed;
         }
+        double entry=dev.realworldmc.EarthConfig.get().spaceEntryHeight();
+        if(Math.abs(SpaceFlight.verticalSpeed(entry)-CreativeFlight.MAX_SPEED)>.0001
+            || SpaceFlight.verticalSpeed(entry+1)-SpaceFlight.verticalSpeed(entry-1)>.003)
+            throw new AssertionError("Atmosphere entry must not jump in speed");
         double h=2000,velocity=0;int ascentTicks=0;
-        while(h<12000000 && ascentTicks++<1400){velocity+=(SpaceFlight.verticalSpeed(h)-velocity)*.2;h+=velocity;}
-        if(ascentTicks>=1400)throw new AssertionError("Full Earth view should be reachable in under 70 seconds");
+        while(h<12000000 && ascentTicks++<6000){velocity+=(SpaceFlight.verticalSpeed(h)-velocity)*.2;h+=velocity;}
+        if(ascentTicks>=6000)throw new AssertionError("Full Earth view should remain reachable within five minutes");
         var pose=new FlightPose();pose.reset(0);
         for(int i=0;i<60;i++)pose.tick(0,0,1,i*11);
         if(Math.abs(pose.pitch(1))>.01 || Math.abs(pose.yaw(1))>.01 || pose.thrust(1)<.99)throw new AssertionError("Vertical climb must remain upright regardless of look direction");

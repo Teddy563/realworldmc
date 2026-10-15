@@ -13,6 +13,15 @@ public final class TravelLoading {
     private final CommandSourceStack source;
     private final ServerBossEvent bar;
     private boolean closed;
+    private final long expires = System.nanoTime() + java.time.Duration.ofMinutes(3).toNanos();
+    static {
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+            for (var loading : java.util.List.copyOf(ACTIVE.values())) {
+                loading.bar.setVisible(EarthConfig.get().actionBar);
+                if (System.nanoTime() > loading.expires) loading.close();
+            }
+        });
+    }
 
     private TravelLoading(CommandSourceStack source) {
         this.source = source;

@@ -12,6 +12,7 @@
     "PhotoCameraMixin",
     "PhotoIrisMixin",
     "FlightVisibilityMixin",
+    "FlightChunkVisibilityMixin",
     "SpacePoseMixin",
     "SpaceModelMixin",
     "SpaceWeatherMixin",

@@ -52,7 +52,7 @@ public final class CreativeFlight {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
             if (words.length < 2 || words.length > 3 || !(words[0].equals("earth") || words[0].equals("rw"))) return true;
-            if (!(words[1].equals("glide") || words[1].equals("fly")) || words.length == 3 && !java.util.Set.of("on", "off").contains(words[2])) return true;
+            if (!words[1].equals("fly") || words.length == 3 && !java.util.Set.of("on", "off").contains(words[2])) return true;
             set(words.length == 3 ? words[2].equals("on") : !enabled());
             return false;
         });
@@ -118,8 +118,8 @@ public final class CreativeFlight {
     static void adjustSpeed(int direction) { speed = Math.clamp(speed + Integer.signum(direction) * .045, MIN_SPEED, MAX_SPEED); }
     static Vec3 direction(int forward, int right, int vertical, float yawDegrees, float pitchDegrees) {
         double yaw = Math.toRadians(yawDegrees), pitch = Math.toRadians(pitchDegrees);
-        Vec3 direction = new Vec3(-Math.sin(yaw) * Math.cos(pitch) * forward + Math.cos(yaw) * right,
-            vertical - Math.sin(pitch) * forward, Math.cos(yaw) * Math.cos(pitch) * forward + Math.sin(yaw) * right);
+        Vec3 direction = new Vec3(-Math.sin(yaw) * Math.cos(pitch) * forward - Math.cos(yaw) * right,
+            vertical - Math.sin(pitch) * forward, Math.cos(yaw) * Math.cos(pitch) * forward - Math.sin(yaw) * right);
         return direction.lengthSqr() > 1 ? direction.normalize() : direction;
     }
     public static boolean travel(Player player) {

@@ -26,7 +26,7 @@ public final class GlobeOrbit {
     }
     public void tick(double altitude, float yaw, int forward, int right, double radius, double speedMultiplier) {
         previous.set(rotation);
-        double rate = Math.min(500_000, Math.max(2, altitude * .055)) * Math.clamp(speedMultiplier, 0, 12) / Math.max(1,Math.hypot(forward,right));
+        double rate = SpaceFlight.verticalSpeed(altitude) * Math.clamp(speedMultiplier, 0, 12) / Math.max(1,Math.hypot(forward,right));
         speed += (forward * rate - speed) * .3;
         sideSpeed += (right * rate - sideSpeed) * .3;
         if (forward == 0 && Math.abs(speed) < .01) speed = 0;
@@ -35,8 +35,8 @@ public final class GlobeOrbit {
         double angle = Math.clamp(length / (radius + altitude), 0, .02);
         if (angle == 0) return;
         double heading = Math.toRadians(yaw);
-        double dx=(-Math.sin(heading)*speed+Math.cos(heading)*sideSpeed)/length;
-        double dz=(Math.cos(heading)*speed+Math.sin(heading)*sideSpeed)/length;
+        double dx=(-Math.sin(heading)*speed-Math.cos(heading)*sideSpeed)/length;
+        double dz=(Math.cos(heading)*speed-Math.sin(heading)*sideSpeed)/length;
         rotation.premul(new Quaterniond().rotationAxis(-angle, dz, 0, -dx)).normalize();
         travelled = true;
     }

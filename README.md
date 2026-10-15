@@ -34,7 +34,7 @@ Windows x64 releases include the service runtime. macOS and Linux need Node.js 2
 |---|---|
 | `/earth help` | Show commands |
 | `/earth setup` | Change or test your keys |
-| `/earth glide` / `/earth fly` | Toggle automatic glide and hover |
+| `/earth fly` | Toggle automatic glide and hover |
 | `/earth goto 44.427454, 26.087287` | Visit the Palace of Parliament |
 | `/earth streetview` | Enter the nearest Street View photo |
 | `/earth back` | Return from Street View |

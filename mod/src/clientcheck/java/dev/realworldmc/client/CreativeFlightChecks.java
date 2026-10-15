@@ -68,7 +68,13 @@ final class CreativeFlightChecks {
                 if(!mc.player.isCreative() || Math.abs(mc.player.getY()-160)>1)return;
                 mc.setScreen(null); mc.player.setYRot(0);mc.player.setXRot(0);
                 MapRenderer.INSTANCE.setRegions(new RegionsPayload(java.util.List.of()));
-                command("earth glide"); require(CreativeFlight.enabled() && !CreativeFlight.gliding(),"Start upright");
+                for (int yaw : new int[]{0,90,180,270}) {
+                    var forward=CreativeFlight.direction(1,0,0,yaw,0);
+                    var right=CreativeFlight.direction(0,1,0,yaw,0);
+                    require(right.dot(forward.cross(new Vec3(0,1,0)))>.999,"Right must match Minecraft camera direction at yaw "+yaw);
+                    require(CreativeFlight.direction(0,-1,0,yaw,0).dot(right)<-.999,"Left must oppose right");
+                }
+                command("earth fly"); require(CreativeFlight.enabled() && !CreativeFlight.gliding(),"Start upright");
                 mc.options.keyUp.setDown(true); next(); return;
             }
             if(stage==10) { sawBoost |= FlightBoost.boosted(); boostedSpeed=Math.max(boostedSpeed,mc.player.getDeltaMovement().length()); }
@@ -105,7 +111,7 @@ final class CreativeFlightChecks {
                     release(mc);mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("realworldmc", "flight_check"), .4, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));mc.options.keyRight.setDown(true);next();
                 }
                 case 5 -> {
-                    require(mc.player.getDeltaMovement().x>4.5 && mc.player.getDeltaMovement().x<4.8,"Movement-speed modifier must scale strafe");
+                    require(mc.player.getDeltaMovement().x< -4.5 && mc.player.getDeltaMovement().x> -4.8,"Movement-speed modifier must scale strafe");
                     mc.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).removeModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("realworldmc", "flight_check"));
                     release(mc);mc.options.keyDown.setDown(true);next();
                 }
@@ -141,12 +147,12 @@ final class CreativeFlightChecks {
                     mc.player.stopFallFlying();
                     server(mc,p->{p.teleportTo(0,160,0);for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)p.serverLevel().setBlockAndUpdate(new net.minecraft.core.BlockPos(x,159,z),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());for(int x=-3;x<=3;x++)for(int y=157;y<=164;y++)p.serverLevel().setBlockAndUpdate(new net.minecraft.core.BlockPos(x,y,10),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());});next();
                 }
-                case 12 -> { mc.player.setYRot(0);mc.player.setXRot(0);command("rw glide on");mc.options.keyUp.setDown(true);next(); }
+                case 12 -> { mc.player.setYRot(0);mc.player.setXRot(0);command("rw fly on");mc.options.keyUp.setDown(true);next(); }
                 case 13 -> {
                     if (mc.player.noPhysics) require(mc.player.getZ()>70,"Axiom noclip must still allow flight through blocks");
                     else require(mc.player.getZ()<9.71 && mc.player.getZ()>8,"Powered flight clipped through blocks");
                     server(mc,p->require(p.getAbilities().flying,"Flight ability must remain synchronized after starting on the ground"));
-                    release(mc);command("rw glide off");
+                    release(mc);command("rw fly off");
                     server(mc,p->{dev.realworldmc.EarthRegions.unload();dev.realworldmc.EarthRegions.add(44.4,26.1,120);p.teleportTo(0,2200,0);});next();
                 }
                 case 14 -> {
@@ -160,13 +166,13 @@ final class CreativeFlightChecks {
                     require(mc.player.position().distanceTo(anchor)<.1,"Orbit moved physical player");
                     require(SpaceFlight.altitude()>reference+100 && !SpaceFlight.orbitRotation(1).equals(new org.joml.Quaterniond(),1e-8),"Orbit flight did not move geographic view");
                     require(CreativeFlight.gliding() && SpaceFlight.pose().pitch(1)>40,"Automatic glide in orbit");
-                    release(mc);command("earth glide on");mc.options.keyUp.setDown(true);mc.player.setXRot(0);
+                    release(mc);command("earth fly on");mc.options.keyUp.setDown(true);mc.player.setXRot(0);
                     require(mc.gameMode.useItem(mc.player,InteractionHand.MAIN_HAND).consumesAction(),"Orbital rocket launch");next();
                 }
                 case 17 -> {
                     require(mc.player.position().distanceTo(anchor)<.1,"Rocket moved orbital anchor");
                     require(SpaceFlight.pose().pitch(1)>85,"Orbital glide pose missing");
-                    release(mc);command("earth space return");command("earth glide");next();
+                    release(mc);command("earth space return");command("earth fly");next();
                 }
                 case 18 -> {
                     require(!SpaceFlight.enabled() && !CreativeFlight.enabled(),"Toggle/return cleanup");
@@ -174,8 +180,8 @@ final class CreativeFlightChecks {
                 }
                 case 19 -> {
                     require(!CreativeFlight.enabled() && !FlightBoost.active(mc.player),"Game-mode change leaked flight");
-                    command("earth glide on");require(!CreativeFlight.enabled(),"Survival should reject Creative flight");
-                    require(ClientSendMessageEvents.ALLOW_COMMAND.invoker().allowSendCommandMessage("earth glide invalid"),"Invalid arguments must reach normal command errors");
+                    command("earth fly on");require(!CreativeFlight.enabled(),"Survival should reject Creative flight");
+                    require(ClientSendMessageEvents.ALLOW_COMMAND.invoker().allowSendCommandMessage("earth fly invalid"),"Invalid arguments must reach normal command errors");
                     Files.writeString(Path.of("creative-flight-result.txt"),"PASS: aliases/toggles, no elytra, 66 m/s forward/back/strafe, throttle, upright rise/descent/hover, both third-person cameras, real rockets/expiry, block collision, automatic anchored orbit with rockets, return and survival cleanup");mc.stop();
                 }
             }

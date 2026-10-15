@@ -21,7 +21,7 @@ public final class SpaceView {
         return projection(original,altitude,6_378_137);
     }
     public static Matrix4f projection(Matrix4f original, double altitude,double radius) {
-        double near = Math.max(1, altitude / 1000), far = far(altitude,radius);
+        double near = Math.max(1, altitude / 100), far = far(altitude,radius);
         return new Matrix4f(original).m22((float)(-(far + near) / (far - near)))
             .m32((float)(-2 * far * near / (far - near)));
     }

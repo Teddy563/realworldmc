@@ -52,7 +52,7 @@ Your rebound camera toggle also works. Entering or leaving Street View preserves
 
 Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. In the prepared 1.0.1 build, photo loading and short control hints appear in stacked lines above the bottom-left map credits. The larger white arrows turn yellow when selected. Loading updates do not fill chat.
 
-`/earth actionbar` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
+`/earth hud` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
 
 Street View uses fixed daylight and softly shaded blocks. Lighting in a 360-degree photograph cannot react to placed torches or match every shadow exactly. The photo dimension uses a vanilla Iris pipeline; Earth exploration keeps your chosen shaders.
 

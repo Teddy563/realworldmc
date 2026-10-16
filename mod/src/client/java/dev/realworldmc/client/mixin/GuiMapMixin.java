@@ -14,8 +14,6 @@ import xaero.map.gui.GuiMap;
 
 @Mixin(value = GuiMap.class, remap = false)
 public class GuiMapMixin {
-    @Unique
-    private static final float FULL_DETAIL_SIZE = 64;
 
     @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lxaero/map/gui/GuiMap;renderTexturedModalRectWithLighting3(Lorg/joml/Matrix4f;FFFFIZLxaero/map/graphics/renderer/multitexture/MultiTextureRenderTypeRenderer;)V"), remap = false)
     private void renderTexturedModalRectWithLighting3(Matrix4f matrix, float x, float y, float width, float height, int texture, boolean hasLight, MultiTextureRenderTypeRenderer renderer, Operation<Void> original,
@@ -39,7 +37,7 @@ public class GuiMapMixin {
 
     @Unique
     private static boolean drawTiles(Matrix4f matrix, float x, float y, float width, float height, int flooredCameraX, int flooredCameraZ, MultiTextureRenderTypeRenderer noLightRenderer) {
-        if (width > FULL_DETAIL_SIZE) return false;
+        if (width > 512) return false; // just for safety if there is any kind of unlimited zoom option
         // x/y are blocks relative to the floored camera position
         return OsmTileCache.draw(matrix, x + flooredCameraX, y + flooredCameraZ, x, y, width, height, noLightRenderer::begin, null);
     }

@@ -151,6 +151,7 @@ public final class MapRenderer {
 		wanted = List.of();
 		displayed = new ArrayList<>();
 		uploadQueue.clear();
+		loading.clear(); // the cleared queue held "loading" tiles
         List<MapTile> old;
         synchronized(loaded) {old=List.copyOf(loaded.values());loaded.clear();lastDrawn.clear();}
         RenderSystem.recordRenderCall(()->old.forEach(MapTile::close));
@@ -237,15 +238,22 @@ public final class MapRenderer {
 		}
 		if (!loading.add(id)) return;
 		io.execute(() -> {
+			boolean queued = false;
 			try {
 				if (myEpoch != epoch || !wantedIds.contains(id)) return; // flew past it already
 				byte[] bytes = ServiceClient.getBytes(String.format(Locale.ROOT, "/render/tile?%s&id=%d",
 					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), id), Duration.ofSeconds(60));
-				if (myEpoch == epoch) uploadQueue.add(new Upload(myEpoch,TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ())));
+				if (myEpoch == epoch) {
+					uploadQueue.add(new Upload(myEpoch,TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ())));
+					queued = true;
+				}
 			} catch (Exception e) {
 				RealWorldMC.LOGGER.warn("Tile {} failed: {}", id, e.toString());
 			} finally {
-				loading.remove(id);
+				// A queued tile stays "loading" until uploadAndSwitch takes it. Uploads only happen while the
+				// world renders (not behind e.g. Xaero's world map), and selection keeps running meanwhile;
+				// without this the same tiles were fetched again every selection until the heap ran out.
+				if (!queued) loading.remove(id);
 			}
 		});
 	}
@@ -256,6 +264,7 @@ public final class MapRenderer {
 		for (int i = 0; i < MAX_UPLOADS_PER_FRAME; i++) {
             Upload upload=uploadQueue.poll();
             if(upload==null)break;
+            loading.remove(upload.data().id);
             if(upload.epoch()!=epoch)continue;
             TileData d=upload.data();
 			synchronized (loaded) {

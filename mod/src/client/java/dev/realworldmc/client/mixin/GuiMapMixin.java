@@ -41,4 +41,6 @@ public class GuiMapMixin {
         // x/y are blocks relative to the floored camera position
         return OsmTileCache.draw(matrix, x + flooredCameraX, y + flooredCameraZ, x, y, width, height, noLightRenderer::begin, null);
     }
+
+
 }

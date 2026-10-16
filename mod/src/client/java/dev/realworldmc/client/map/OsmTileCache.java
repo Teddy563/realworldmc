@@ -36,11 +36,19 @@ public final class OsmTileCache {
         t.setDaemon(true);
         return t;
     });
+    // There was a bug: whenever an OSM tile wasn't on the GPU for a frame the map drew Xaero's texture instead
+    // Now it always keeps 256 tiles. Above that, it only frees tiles that haven't been drawn for 2 seconds. Tiles on screen stay loaded, up to a hard limit of 2048 tiles.
+    private static final int MIN_TEXTURES = 256;
+    private static final int MAX_TEXTURES = 2048;
+    private static final long STALE_MS = 2_000;
+    private static final Map<Long, Long> LAST_USED = new HashMap<>();
     private static final Map<Long, DynamicTexture> TEXTURES = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<Long, DynamicTexture> eldest) {
-            if (size() <= 256) return false;
-            // A batch queued this frame may still use it, free it once the frame is done
+            if (size() <= MIN_TEXTURES) return false;
+            long idle = System.currentTimeMillis() - LAST_USED.getOrDefault(eldest.getKey(), 0L);
+            if (idle < STALE_MS && size() <= MAX_TEXTURES) return false;
+            LAST_USED.remove(eldest.getKey());
             DynamicTexture texture = eldest.getValue();
             RenderSystem.recordRenderCall(texture::close);
             return true;
@@ -61,15 +69,18 @@ public final class OsmTileCache {
         int columns = maxTx - minTx + 1;
 
         DynamicTexture[] textures = new DynamicTexture[columns * (maxTy - minTy + 1)];
-        boolean ready = true;
+        boolean ready = true, failed = false;
         for (int ty = minTy; ty <= maxTy; ty++) {
             for (int tx = minTx; tx <= maxTx; tx++) {
                 DynamicTexture texture = tile(tx, ty);
-                if (texture == null) ready = false;
+                if (texture == null) {
+                    ready = false;
+                    if (FAILED_AT.containsKey(key(tx, ty))) failed = true;
+                }
                 textures[(ty - minTy) * columns + (tx - minTx)] = texture;
             }
         }
-        if (!ready) return false;
+        if (!ready) return !failed;
 
         double spanX = se[0] - nw[0], spanY = se[1] - nw[1];
         for (int ty = minTy; ty <= maxTy; ty++) {
@@ -126,7 +137,10 @@ public final class OsmTileCache {
     private static DynamicTexture tile(int tx, int ty) {
         long key = key(tx, ty);
         DynamicTexture texture = TEXTURES.get(key);
-        if (texture != null) return texture;
+        if (texture != null) {
+            LAST_USED.put(key, System.currentTimeMillis());
+            return texture;
+        }
 
         CompletableFuture<NativeImage> download = DOWNLOADS.get(key);
         if (download == null) {
@@ -152,6 +166,7 @@ public final class OsmTileCache {
         DOWNLOADS.remove(key);
         try {
             texture = new DynamicTexture(download.join());
+            LAST_USED.put(key, System.currentTimeMillis());
             TEXTURES.put(key, texture);
             FAILED_AT.remove(key);
             return texture;

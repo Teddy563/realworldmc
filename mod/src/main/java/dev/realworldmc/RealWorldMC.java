@@ -2,8 +2,8 @@ package dev.realworldmc;
 
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import dev.realworldmc.maptest.MapProjection;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -27,8 +27,10 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -245,8 +247,17 @@ public class RealWorldMC implements ModInitializer {
 	private static int where(CommandSourceStack src) {
 		double[] g=currentCoordinates(src);
 		if(g==null){src.sendFailure(RWMessages.message("This is not a RealWorldMC place."));return 0;}
-		String link = String.format(Locale.ROOT, "https://www.google.com/maps/@%.6f,%.6f,19z", g[0], g[1]);
-		src.sendSuccess(() -> RWMessages.message(String.format(Locale.ROOT, "You are at %.6f, %.6f  ", g[0], g[1]))
+		// TODO: Remove this later
+//		String link = String.format(Locale.ROOT, "https://www.google.com/maps/@%.6f,%.6f,19z", g[0], g[1]);
+		String link = MapProjection.getCurrentLocation(g[0], g[1]);
+        try {
+			Path path = MapProjection.downloadTile(link, g[0], g[1]);
+		} catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        src.sendSuccess(() -> RWMessages.message(String.format(Locale.ROOT, "You are at %.6f, %.6f  ", g[0], g[1]))
 			.append(Component.literal(link).withStyle(s -> s.withColor(ChatFormatting.AQUA).withUnderlined(true)
 				.withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.OPEN_URL, link)))), false);
 		return 1;

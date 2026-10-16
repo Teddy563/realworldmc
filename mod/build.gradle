@@ -30,6 +30,7 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
     modImplementation "xaero.minimap:xaerominimap-fabric-1.21.1:26.6.0"
+    modImplementation "xaero.map:xaeroworldmap-fabric-1.21.1:1.47.0"
 }
 
 processResources {

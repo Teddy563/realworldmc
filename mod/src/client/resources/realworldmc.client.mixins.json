@@ -18,7 +18,9 @@
     "SpaceModelMixin",
     "SpacePoseMixin",
     "SpaceWeatherMixin",
-    "MinimapFBORendererMixin"
+    "MinimapFBORendererMixin",
+    "GuiMapMixin",
+    "SupportXaeroWorldmapMixin"
   ],
   "injectors": {
     "defaultRequire": 1

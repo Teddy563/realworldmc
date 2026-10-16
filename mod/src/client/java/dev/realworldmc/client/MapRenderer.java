@@ -61,8 +61,16 @@ public final class MapRenderer {
 
 	/** All places of the world (from the server); null when not in an RealWorldMC world. */
 	private volatile List<EarthRegions.Region> regions;
+
+	// sorry for adding this, but i dont want to write mixin getter
+	public List<EarthRegions.Region> getRegions() {
+		return regions;
+	}
+
 	/** Region the camera is in; tiles are only streamed for this one. */
 	private volatile EarthRegions.Region current;
+
+
 	/** Bumped whenever the region changes so stale downloads are dropped. */
 	private volatile int epoch;
 

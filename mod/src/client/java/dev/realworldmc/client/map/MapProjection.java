@@ -1,4 +1,4 @@
-package dev.realworldmc.maptest;
+package dev.realworldmc.client.map;
 
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -6,7 +6,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;

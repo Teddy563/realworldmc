@@ -81,7 +81,6 @@ public class MapProjection {
 
     // "Country, City" names from OSM Nominatim.
     // One line per cell: "<cell>\t<name>", an empty name means nothing there (e.g. open sea).
-    // City cache and detector wasnt written by me, but i reviewed and tested this many times, it works correctly
     private static final Path CITY_FILE = TILE_DIR.resolveSibling("realworldmc-cities.txt");
     private static final Map<Long, String> CITIES = loadCities();
     private static final ExecutorService GEOCODER = Executors.newSingleThreadExecutor(r -> {

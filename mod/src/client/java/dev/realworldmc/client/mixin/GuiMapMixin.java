@@ -4,11 +4,17 @@ package dev.realworldmc.client.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import dev.realworldmc.EarthRegions;
+import dev.realworldmc.client.map.MapProjection;
 import dev.realworldmc.client.map.OsmTileCache;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.Level;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import xaero.map.graphics.renderer.multitexture.MultiTextureRenderTypeRenderer;
 import xaero.map.gui.GuiMap;
 
@@ -41,6 +47,22 @@ public class GuiMapMixin {
         // x/y are blocks relative to the floored camera position
         return OsmTileCache.draw(matrix, x + flooredCameraX, y + flooredCameraZ, x, y, width, height, noLightRenderer::begin, null);
     }
+
+    @ModifyVariable(method = "render", at = @At("STORE"), name = "biomeText", remap = false)
+    private String replaceBiomeText(String original,
+                                    @Local(name = "mousePosX") double mouseX,
+                                    @Local(name = "mousePosZ") double mouseZ) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null || level.dimension() != Level.OVERWORLD) return original;
+        EarthRegions.Region region = MapProjection.regionAt(mouseX, mouseZ);
+        if (region == null) return original;
+        double[] geo = MapProjection.latLon(region, mouseX, mouseZ);
+        String name = MapProjection.cityAt(geo[0], geo[1]);
+        return name == null ? original : name;
+    }
+
+
+
 
 
 }

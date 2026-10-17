@@ -26,6 +26,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.IntFunction;
 
+import static dev.realworldmc.client.map.MapProjection.latLon;
+
 // tiles saver (cache)
 public final class OsmTileCache {
     // for now i'll just put in variable in case you want to change zoom (changing ts was very buggy in my tests, so just use 17)
@@ -59,7 +61,7 @@ public final class OsmTileCache {
 
 
     public static boolean draw(Matrix4f matrix, double worldX, double worldZ, float x, float z, float width, float height, IntFunction<BufferBuilder> begin, float[] rgba) {
-        EarthRegions.Region region = regionAt(worldX + width / 2, worldZ + height / 2);
+        EarthRegions.Region region = MapProjection.regionAt(worldX + width / 2, worldZ + height / 2);
         if (region == null) return false;
         // northwest and southeast corners
         double[] nw = tileCoords(region, worldX, worldZ);
@@ -108,26 +110,9 @@ public final class OsmTileCache {
         vertex.setUv((float) u, (float) v);
     }
 
-    private static EarthRegions.Region regionAt(double worldX, double worldZ) {
-        List<EarthRegions.Region> regions = MapRenderer.INSTANCE.getRegions();
-        int index = EarthRegions.indexAt(worldX, worldZ);
-        return regions != null && index >= 0 && index < regions.size() ? regions.get(index) : null;
-    }
 
-    private static double[] latLon(EarthRegions.Region region, double worldX, double worldZ) {
-        return Geo.mcToGeodetic(region.latitude(), region.longitude(), region.groundHeight(),
-                worldX - region.offsetX(), EarthChunkGenerator.GROUND_Y, worldZ - region.offsetZ());
-    }
 
-    private static double[] tileCoords(EarthRegions.Region region, double worldX, double worldZ) {
-        double[] geo = latLon(region, worldX, worldZ);
-        double latRad = Math.toRadians(Math.clamp(geo[0], -85.05112878, 85.05112878));
-        double count = 1 << TILE_ZOOM;
-        return new double[] {
-                (geo[1] + 180.0) / 360.0 * count,
-                (1.0 - Math.log(Math.tan(latRad) + 1.0 / Math.cos(latRad)) / Math.PI) / 2.0 * count
-        };
-    }
+
 
     private static long key(int tx, int ty) {
         return ((long) tx << 32) | (ty & 0xFFFFFFFFL);
@@ -151,7 +136,7 @@ public final class OsmTileCache {
                     TILE_ZOOM, Math.floorMod(tx, count), Math.clamp(ty, 0, count - 1));
             DOWNLOADS.put(key, CompletableFuture.supplyAsync(() -> {
                 try {
-                    Path png = MapProjection.downloadTile(url, Double.NaN, Double.NaN);
+                    Path png = MapProjection.downloadTile(url);
                     try (var stream = Files.newInputStream(png)) {
                         return NativeImage.read(stream);
                     }
@@ -176,4 +161,15 @@ public final class OsmTileCache {
             return null;
         }
     }
+
+    private static double[] tileCoords(EarthRegions.Region region, double worldX, double worldZ) {
+        double[] geo = latLon(region, worldX, worldZ);
+        double latRad = Math.toRadians(Math.clamp(geo[0], -85.05112878, 85.05112878));
+        double count = 1 << TILE_ZOOM;
+        return new double[] {
+                (geo[1] + 180.0) / 360.0 * count,
+                (1.0 - Math.log(Math.tan(latRad) + 1.0 / Math.cos(latRad)) / Math.PI) / 2.0 * count
+        };
+    }
+
 }

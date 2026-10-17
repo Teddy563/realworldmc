@@ -31,10 +31,10 @@ public class RealWorldMCClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(panorama::tick);
         ClientTickEvents.END_CLIENT_TICK.register(DistantHorizonsCompat::update);
         WorldRenderEvents.START.register(context -> DistantHorizonsCompat.update(Minecraft.getInstance()));
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> client.execute(() -> {panorama.clear();DistantHorizonsCompat.release();}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> onClientThread(client, () -> {panorama.clear();DistantHorizonsCompat.release();}));
         HudRenderCallback.EVENT.register((graphics,delta) -> panorama.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(RegionsPayload.TYPE, (payload, context) -> context.client().execute(() -> renderer.setRegions(payload)));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(renderer::clear));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, renderer::clear));
 		ClientTickEvents.END_CLIENT_TICK.register(renderer::tick);
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> renderer.onChunkLoaded(chunk.getPos()));
 		WorldRenderEvents.AFTER_ENTITIES.register(renderer::render);
@@ -52,5 +52,11 @@ public class RealWorldMCClient implements ClientModInitializer {
             ActionBar.render(graphics,h-25,ActionBar.flightControls());
             SpaceDestinations.hud(graphics);
 		});
+	}
+
+	// Minecraft.disconnect drops all queued tasks, so cleanup queued with execute() while leaving a world could be lost: the next (even vanilla) world then kept the old places and drew their photo mesh.
+	private static void onClientThread(Minecraft client, Runnable task) {
+		if (client.isSameThread()) task.run();
+		else client.execute(task);
 	}
 }

@@ -42,7 +42,6 @@ public class MapProjection {
     private static final Pattern TILE_URL = Pattern.compile(".*/(\\d+)/(\\d+)/(\\d+)\\.png$");
 
 
-    // i think i need to put it in another file, i was testing stuff here
     public static Path downloadTile(String url) throws IOException, InterruptedException {
         Matcher m = TILE_URL.matcher(url);
         if (!m.matches()) throw new IllegalArgumentException("Not a z/x/y.png tile URL: " + url);
@@ -62,7 +61,6 @@ public class MapProjection {
             if (response.statusCode() != 200) {
                 throw new IOException("Tile download failed with HTTP " + response.statusCode() + ": " + url);
             }
-            // idk if this the most efficient way to save it, but it works
             Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files.deleteIfExists(temp);

@@ -15,7 +15,7 @@ public class RealWorldMCClient implements ClientModInitializer {
 	public void onInitializeClient() {
         SetupScreen.register();
         ClientTickEvents.END_CLIENT_TICK.register(dev.realworldmc.client.map.OsmTileCache::tick);
-        HudRenderCallback.EVENT.register((graphics, delta) -> dev.realworldmc.client.map.OsmTileCache.credits(graphics));
+
         CreativeFlight.register();
         SpaceFlight.register();
         ClientTickEvents.END_CLIENT_TICK.register(SpaceDestinations::tick);

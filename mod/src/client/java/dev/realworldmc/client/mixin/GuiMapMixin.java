@@ -43,7 +43,13 @@ public class GuiMapMixin {
 
     @org.spongepowered.asm.mixin.injection.Inject(method = "render", at = @At("TAIL"), remap = true)
     private void mapCredits(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float delta, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
-        OsmTileCache.credits(graphics);
+        OsmTileCache.credits(graphics, true);
+    }
+
+    @org.spongepowered.asm.mixin.injection.Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = true)
+    private void creditClicked(double x, double y, int button, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> ci) {
+        var screen = (GuiMap) (Object) this;
+        if (OsmTileCache.clickCredit(x, y, button, screen.width, screen.height)) ci.setReturnValue(true);
     }
 
     @Unique

@@ -55,17 +55,30 @@ public final class OsmTileCache {
         TEXTURES.clear(); lastDraw = 0; provider = null;
     }
 
-    public static void credits(GuiGraphics graphics) {
-        if (lastDraw == 0) return;
+    private static final String CREDIT = "© OpenStreetMap contributors";
+    private static final float CREDIT_SCALE = .75f;
+    private static int creditX(int width, boolean fullscreen) {
+        return fullscreen ? Math.max(4, width - 28 - (int)Math.ceil(Minecraft.getInstance().font.width(CREDIT) * CREDIT_SCALE)) : 4;
+    }
+    public static void credits(GuiGraphics graphics) { credits(graphics, false); }
+    public static void credits(GuiGraphics graphics, boolean fullscreen) {
+        if (lastDraw == 0 || (!fullscreen && Minecraft.getInstance().screen != null)) return;
         var font = Minecraft.getInstance().font;
-        String text = "© OpenStreetMap contributors · openstreetmap.org/copyright";
+        int x = creditX(graphics.guiWidth(), fullscreen);
+        int y = graphics.guiHeight() - (fullscreen ? 12 : 42);
         graphics.pose().pushPose();
-        float scale = Math.min(1f, (graphics.guiWidth() - 8f) / font.width(text));
-        graphics.pose().scale(scale, scale, 1);
-        int y = (int) ((graphics.guiHeight() - 42) / scale);
-        graphics.fill(2, y - 2, font.width(text) + 6, y + 10, 0xc0000000);
-        graphics.drawString(font, text, 4, y, 0xffffffff, false);
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(CREDIT_SCALE, CREDIT_SCALE, 1);
+        graphics.fill(-2, -1, font.width(CREDIT) + 2, 9, 0x88000000);
+        graphics.drawString(font, CREDIT, 0, 0, 0xffdddddd, false);
         graphics.pose().popPose();
+    }
+    public static boolean clickCredit(double mouseX, double mouseY, int button, int width, int height) {
+        int x = creditX(width, true), y = height - 12;
+        if (lastDraw == 0 || button != 0 || mouseX < x - 2 || mouseX > x + Minecraft.getInstance().font.width(CREDIT) * CREDIT_SCALE + 2
+                || mouseY < y - 1 || mouseY > y + 9 * CREDIT_SCALE) return false;
+        net.minecraft.Util.getPlatform().openUri(java.net.URI.create("https://www.openstreetmap.org/copyright"));
+        return true;
     }
 
     public static boolean draw(ResourceKey<Level> dimension, Matrix4f matrix, double worldX, double worldZ,

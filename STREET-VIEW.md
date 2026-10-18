@@ -11,3 +11,5 @@ The optional browser viewer (also used by 26.2) needs its own Maps JavaScript AP
 Photo navigation does not supply real interiors or precise wall depth. Existing building and explosion effects use approximate Minecraft collision geometry. Coverage, account eligibility and usage charges depend on your provider.
 
 `/earth back` opens Earth at your current Street View coordinates, with an upward camera transition around your existing character. The destination chunk loads before transfer. `/earth back original` restores the saved entry point instead. Failed terrain preparation keeps the current photo and return point. Nearby walking uses frame-interpolated movement and smooth bounded parallax (up to 0.45 m), avoiding the old tick-to-frame ground jitter.
+
+Entering Street View waits for the photograph, lifts the camera around your character, then fades into the photo and restores your previous camera mode. Failed or cancelled entry restores the camera. Navigation arrows are gray; yellow marks the selected direction.

@@ -6,9 +6,12 @@ export function panoramaLayout(meta, maxWidth = 4096) {
   if (![1024,2048,4096].includes(maxWidth)) throw new Error("Photo width must be 1024, 2048 or 4096.");
   const {imageWidth:w,imageHeight:h,tileWidth:tw,tileHeight:th}=meta;
   if (![w,h,tw,th].every(Number.isSafeInteger) || w<1 || h<1 || w>32768 || h>16384 || tw<1 || th<1 || tw>1024 || th>1024) throw new Error('Invalid panorama dimensions.');
-  let zoom=5;
-  while(zoom>1 && (Math.ceil(w/2**(5-zoom))>maxWidth || Math.ceil(h/2**(5-zoom))>maxWidth/2))zoom--;
-  const width=Math.ceil(w/2**(5-zoom)),height=Math.ceil(h/2**(5-zoom));
+  // Smaller contributor panoramas reach native resolution before zoom 5.
+  // Using 5 for every image crops the upper-left quarter of those photos.
+  const nativeZoom=Math.max(1,Math.min(5,Math.ceil(Math.log2(w/tw))));
+  let zoom=nativeZoom;
+  while(zoom>1 && (Math.ceil(w/2**(nativeZoom-zoom))>maxWidth || Math.ceil(h/2**(nativeZoom-zoom))>maxWidth/2))zoom--;
+  const width=Math.ceil(w/2**(nativeZoom-zoom)),height=Math.ceil(h/2**(nativeZoom-zoom));
   return {zoom,width,height,columns:Math.ceil(width/tw),rows:Math.ceil(height/th),tileWidth:tw,tileHeight:th};
 }
 

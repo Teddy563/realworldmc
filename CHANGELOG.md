@@ -6,6 +6,8 @@
 
 ## 1.0.3 (unreleased)
 
+- Fixed incomplete 360 images from smaller panoramas by selecting their actual native tile zoom. Added a matching camera transition into Street View, with gray navigation arrows and a yellow selected direction.
+
 - Enabled geographic Xaero maps in Street View, added bounded walking parallax and photo fades, and condensed the HUD into a scoreboard panel with an independent usage toggle.
 
 - Replaced whole-triangle damage masking with saved block-volume cuts and textured material edges; fixed new terrain filler protruding above scanned streets. See [building damage](docs/building-damage.md).

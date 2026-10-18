@@ -13,7 +13,7 @@ final class StreetWalkingChecks {
     private com.sun.net.httpserver.HttpServer fixture;
     private final AtomicInteger photographs = new AtomicInteger();
     private int stage, ticks, total;
-    private boolean opened, mapChecked, returnFailureChecked, exitCameraSeen;
+    private boolean opened, mapChecked, returnFailureChecked, exitCameraSeen, entryCameraSeen;
     private volatile net.minecraft.core.BlockPos damagePosition;
     private double anchorX, anchorZ;
     private volatile Throwable serverFailure;
@@ -100,6 +100,8 @@ final class StreetWalkingChecks {
                 mc.setScreen(null);server(mc,p->{p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);if(EarthRegions.all().isEmpty())EarthRegions.add(0,0,0);PanoramaRoom.enter(p.createCommandSourceStack(),0,0);});stage=1;ticks=0;return;
             }
             if(stage==1) {
+                if(StreetExitTransition.entering()){entryCameraSeen=true;require(mc.options.getCameraType()==net.minecraft.client.CameraType.THIRD_PERSON_BACK,"Entry uses the avatar camera");return;}
+                require(!PanoramaRenderer.INSTANCE.active() || entryCameraSeen,"Entry animates before revealing the panorama");
                 if(!PanoramaRenderer.INSTANCE.active())return;
                 require(PanoramaRenderer.INSTANCE.walking(),"Street View starts in walking mode");
                 var region=PanoramaRenderer.INSTANCE.mapRegion();require(region!=null,"Street View sends its own geographic map anchor");

@@ -59,7 +59,7 @@ test('high-resolution panorama uses source tiles within bounded memory',()=>{
  const layout=panoramaLayout({imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512});
  assert.deepEqual(layout,{zoom:3,width:3328,height:1664,columns:7,rows:4,tileWidth:512,tileHeight:512});
  assert.equal(panoramaLayout({imageWidth:16384,imageHeight:8192,tileWidth:512,tileHeight:512}).width,4096);
- assert.equal(panoramaLayout({imageWidth:2048,imageHeight:1024,tileWidth:512,tileHeight:512}).zoom,5);
+ assert.equal(panoramaLayout({imageWidth:2048,imageHeight:1024,tileWidth:512,tileHeight:512}).zoom,2);
  assert.throws(()=>panoramaLayout({imageWidth:1e9,imageHeight:1e9,tileWidth:512,tileHeight:512}));
 });
 test('stitching crops padded right and bottom tiles instead of stretching the panorama',()=>{
@@ -108,4 +108,9 @@ test('one panorama in flight coalesces consumers without retaining completed ima
  const [a,b]=await Promise.all([first,second]);
  assert.strictEqual(a,b);assert.equal(tiles,8);assert.ok(peak<=3);assert.equal(provider.assembly,null);
  const image=jpeg.decode(a,{useTArray:true});assert.equal(image.width,1664);assert.equal(image.height,832);
+});
+
+test('smaller contributor panorama retains the complete 360 degree image',()=>{
+ const layout=panoramaLayout({imageWidth:5504,imageHeight:2752,tileWidth:512,tileHeight:512},2048);
+ assert.deepEqual(layout,{zoom:2,width:1376,height:688,columns:3,rows:2,tileWidth:512,tileHeight:512});
 });

@@ -48,7 +48,7 @@ public final class PanoramaRenderer {
     private dev.realworldmc.EarthRegions.Region mapRegion;
     private String copyright="",report="",status="";
     private boolean session,loading,walking,walkingRequested,sourcesVisible;
-    private int generation, ticket, pendingTicket;
+    private int generation, ticket, pendingTicket, entryReadyTicket;
     private NativeImage prepared;
     private JsonObject preparedMetadata;
     private boolean arrivalGuard;
@@ -77,6 +77,7 @@ public final class PanoramaRenderer {
     public KeyMapping flightSpeedKey(boolean faster) { return movement[faster ? 0 : 1]; }
     public double groundY(){return groundY;}
     public void clear(){
+        entryReadyTicket=0;if(StreetExitTransition.entering())StreetExitTransition.clear();
         if(Minecraft.getInstance().player!=null)Minecraft.getInstance().player.noPhysics=Minecraft.getInstance().player.isSpectator();
         arrivalGuard=false;mapRegion=null;generation++;session=false;loading=false;metadata=null;status="";report="";copyright="";forwardWasDown=false;
         walking=false;walkingRequested=false;sourcesVisible=false;noticeUntil=0;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=0;walkBlocked=false;
@@ -113,7 +114,7 @@ public final class PanoramaRenderer {
                 }
             }
             case "loading" -> {generation++;discardPrepared();pendingTicket=payload.ticket();loading=true;status=payload.metadata();}
-            case "error" -> {if(payload.ticket()==pendingTicket || payload.ticket()==ticket){generation++;discardPrepared();loading=false;walkingRequested=false;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=net.minecraft.Util.getMillis()+2000;walkBlocked=true;notice(payload.metadata());}}
+            case "error" -> {if(payload.ticket()==pendingTicket || payload.ticket()==ticket){entryReadyTicket=0;if(StreetExitTransition.entering())StreetExitTransition.clear();generation++;discardPrepared();loading=false;walkingRequested=false;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=net.minecraft.Util.getMillis()+2000;walkBlocked=true;notice(payload.metadata());}}
             case "prepare" -> {
                 if(payload.ticket()!=pendingTicket)return;
                 try{load(JsonParser.parseString(payload.metadata()).getAsJsonObject(),payload.ticket());}
@@ -134,9 +135,10 @@ public final class PanoramaRenderer {
                     copyright=text(metadata,"copyright","Google");report=text(metadata,"reportProblemLink","");
                     arrivalGuard=session && walking;ticket=payload.ticket();session=true;loading=false;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=net.minecraft.Util.getMillis()+500;walkBlocked=false;forwardWasDown=mc.options.keyUp.isDown();
                     anchorX=payload.x();anchorY=payload.y();anchorZ=payload.z();
+                    if(StreetExitTransition.entering())StreetExitTransition.arrive();
                     walkingRequested=false;notice("Street View ready · /earth back returns");
                     RealWorldMC.LOGGER.debug("Street View photograph committed at {}, {}, {}",anchorX,anchorY,anchorZ);
-                }catch(Exception e){discardPrepared();loading=false;notice("Photo upload failed; /earth back returns.");RealWorldMC.LOGGER.error("Street View texture upload failed",e);}
+                }catch(Exception e){if(StreetExitTransition.entering())StreetExitTransition.clear();discardPrepared();loading=false;notice("Photo upload failed; /earth back returns.");RealWorldMC.LOGGER.error("Street View texture upload failed",e);}
             }
         }
     }
@@ -174,7 +176,8 @@ public final class PanoramaRenderer {
                 mc.execute(()->{
                     if(generationNow!=generation || request!=pendingTicket){ready.close();return;}
                     discardPrepared();prepared=ready;preparedMetadata=data;status="Ready · Waiting for travel";
-                    action(request,"ready","");
+                    if(!session){StreetExitTransition.beginEntry();entryReadyTicket=request;}
+                    else action(request,"ready","");
                 });
             }catch(Exception e){RealWorldMC.LOGGER.warn("Street View photo download/decode failed",e);if(image!=null)image.close();mc.execute(()->{
                 if(generationNow==generation && request==pendingTicket){loading=false;status="Photo loading failed. Previous stop retained.";action(request,"failed","");}
@@ -284,6 +287,10 @@ public final class PanoramaRenderer {
     }
     private boolean validReport(){try{URI u=URI.create(report);String h=u.getHost();return "https".equals(u.getScheme()) && h!=null && (h.equals("google.com")||h.endsWith(".google.com")||h.endsWith(".googleapis.com"));}catch(Exception e){return false;}}
     public void tick(Minecraft mc){
+        if(entryReadyTicket!=0 && StreetExitTransition.concealed()){
+            int ready=entryReadyTicket;entryReadyTicket=0;
+            if(ready==pendingTicket && prepared!=null)action(ready,"ready","");
+        }
         // Runs before entering the photo dimension too; no hidden first-load status.
         if (mc.player != null && (loading || net.minecraft.Util.getMillis() < noticeUntil))
             mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
@@ -324,7 +331,7 @@ public final class PanoramaRenderer {
         for(int i=0;i<directions.length;i++){
             double angle=Math.toRadians(directions[i]-heading),sin=Math.sin(angle),cos=Math.cos(angle);
             int ax=cx+(int)Math.round(sin*62),ay=cy-(int)Math.round(cos*25);
-            int color=loading?0x55ffffff:i==selected?0xcc66dd99:0x88ffffff;
+            int color=loading?0x55ffffff:i==selected?0xccffdd35:0x88cccccc;
             for(int y=0;y<glyph.length;y++)for(int x=0;x<glyph[y].length();x++)if(glyph[y].charAt(x)=='1'){
                 double dx=(x-3)*3,dy=(y-3)*3;int px=ax+(int)Math.round(dx*cos-dy*sin),py=ay+(int)Math.round(dx*sin+dy*cos);
                 g.fill(px+1,py+1,px+4,py+4,0x66000000);g.fill(px,py,px+3,py+3,color);

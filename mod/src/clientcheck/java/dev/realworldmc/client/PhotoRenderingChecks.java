@@ -35,7 +35,7 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
             if(flightCheck!=null){flightCheck.tick(mc);return;}
             if(ran || mc.getOverlay()!=null || GameRenderer.getPositionTexShader()==null)return;
             ran=true;
-            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);SpaceViewChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, geographic scale, clipping and render-state restoration, orbital projection and stars, Moon and Mars textured hemispheres"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
+            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);MapExcavationChecks.run(mc);SpaceViewChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, exact map-wall holes and brick cut faces, geographic scale, clipping and render-state restoration, orbital projection and stars, Moon and Mars textured hemispheres"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
             catch(Throwable failure){failure.printStackTrace();try{Files.writeString(Path.of("photo-check-result.txt"),"FAIL: "+failure);}catch(Exception ignored){}}
             finally{
                 if(Boolean.getBoolean("realworldmc.planetTravelCheck")) {planetCheck=new PlanetTravelChecks();planetCheck.start(mc);}

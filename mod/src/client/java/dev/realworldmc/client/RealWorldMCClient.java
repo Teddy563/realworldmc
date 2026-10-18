@@ -24,6 +24,8 @@ public class RealWorldMCClient implements ClientModInitializer {
         PanoramaRenderer panorama=PanoramaRenderer.INSTANCE;
         panorama.registerKeys();
         ClientPlayNetworking.registerGlobalReceiver(dev.realworldmc.PanoramaPayload.TYPE, (payload, context) -> context.client().execute(() -> panorama.receive(payload)));
+        ClientPlayNetworking.registerGlobalReceiver(dev.realworldmc.MapEditsPayload.TYPE,(payload,context)->context.client().execute(()->MapDamage.receive(payload)));
+        WorldRenderEvents.AFTER_ENTITIES.register(MapDamage::render);
         ClientPlayNetworking.registerGlobalReceiver(dev.realworldmc.StreetEditsPayload.TYPE,(payload,context)->context.client().execute(()->PhotoEditsRenderer.INSTANCE.receive(payload)));
         // Draw the photo after chunk depth, before entities. A shader sky can no longer replace it.
         net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry.registerSkyRenderer(dev.realworldmc.PanoramaRoom.ROOM,context -> {});
@@ -36,7 +38,7 @@ public class RealWorldMCClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> onClientThread(client, () -> {panorama.clear();DistantHorizonsCompat.release();}));
         HudRenderCallback.EVENT.register((graphics,delta) -> panorama.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(RegionsPayload.TYPE, (payload, context) -> context.client().execute(() -> renderer.setRegions(payload)));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, () -> { renderer.clear(); dev.realworldmc.client.map.OsmTileCache.clear(); }));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, () -> { renderer.clear(); MapDamage.clear(); dev.realworldmc.client.map.OsmTileCache.clear(); }));
 		ClientTickEvents.END_CLIENT_TICK.register(renderer::tick);
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> renderer.onChunkLoaded(chunk.getPos()));
 		WorldRenderEvents.AFTER_ENTITIES.register(renderer::render);

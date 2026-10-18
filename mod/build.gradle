@@ -75,6 +75,12 @@ tasks.register('streetNavigationChecks', JavaExec) {
 	mainClass = 'dev.realworldmc.StreetNavigationChecks'
 }
 tasks.named('check') { dependsOn tasks.named('streetNavigationChecks') }
+tasks.register('meshCutChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.MeshCutChecks'
+}
+tasks.named('check') { dependsOn tasks.named('meshCutChecks') }
 tasks.register('setupChecks', JavaExec) {
     dependsOn tasks.named('checksClasses')
     classpath = sourceSets.checks.runtimeClasspath
@@ -219,6 +225,13 @@ tasks.named('runMapClientCheck') {
     doLast {
         def result = layout.projectDirectory.file("run-map-check-${providers.gradleProperty('xaeroTestSet').getOrElse('none')}/map-check-result.txt").asFile
         if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Map client check did not finish')
+    }
+}
+tasks.named('runPhotoCheck') {
+    doFirst { delete layout.projectDirectory.file('run-photo-check/photo-check-result.txt') }
+    doLast {
+        def result = layout.projectDirectory.file('run-photo-check/photo-check-result.txt').asFile
+        if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Photo rendering check did not finish')
     }
 }
 loom.runs {

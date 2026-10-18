@@ -2,6 +2,9 @@
 
 ## 1.0.3 (unreleased)
 
+- Replaced whole-triangle damage masking with saved block-volume cuts and textured material edges; fixed new terrain filler protruding above scanned streets. See [building damage](docs/building-damage.md).
+- Stopped inferring Street View edits from regenerated terrain; retained ambiguous legacy records for recovery.
+
 - Added default Street View walking with a 5×5 free area, one requested destination prepared at the edge, a 6×6 transition and a 7×7 waiting boundary.
 - Reduced default photo tile use, bounded concurrent assembly and added rate-limit backoff.
 - Fixed optional Xaero loading, dimension isolation, dateline bounds, image ownership and visible map attribution. Deferred automatic city lookup.

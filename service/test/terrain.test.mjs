@@ -52,3 +52,20 @@ test('empty coverage is distinguishable from real terrain', () => {
   const { surfaceColumns } = scene([], []);
   assert.equal(surfaceColumns, 0);
 });
+
+test('building footprint filler stays below the adjacent photographed street', () => {
+  // A hollow scanned building has a roof but no photographed floor inside it.
+  const positions=[],indices=[];
+  const quad=(x0,z0,x1,z1,y)=>{
+    const n=positions.length/3;positions.push(x0,y,z0,x1,y,z0,x1,y,z1,x0,y,z1);
+    indices.push(n,n+1,n+2,n,n+2,n+3);
+  };
+  quad(0,0,5,16,64.6);quad(11,0,16,16,64.6);
+  quad(5,0,11,5,64.6);quad(5,11,11,16,64.6);
+  quad(5,5,11,11,76.6);
+  const {vox}=scene(positions,indices);
+  const at=(x,y,z)=>vox[(y*16+z)*16+x];
+  assert.equal(at(8,64,8),M.HIDDEN_FILL,'a dirt cube here would reach 65, above the 64.6m street photo');
+  assert.equal(at(8,63,8),M.FILL_DIRT,'deep earth remains physical and textured');
+  assert.equal(at(8,66,8),M.AIR,'building interior remains hollow');
+});

@@ -44,13 +44,19 @@ public final class PhotoEditsRenderer {
     // Also exercised by the isolated OpenGL fixture at both origin and distant geographic regions.
     void renderEdits(Vec3 camera, Matrix4f view, Function<BlockPos, BlockState> stateAt,
                      Predicate<BlockPos> loaded, BlockAndTintGetter tintWorld,double groundY) {
+        renderEdits(camera,view,stateAt,loaded,tintWorld,groundY,false);
+    }
+    void renderMapCuts(Vec3 camera,Matrix4f view,Function<BlockPos,BlockState> stateAt,Predicate<BlockPos> loaded,BlockAndTintGetter world) {
+        renderEdits(camera,view,stateAt,loaded,world,64,true);
+    }
+    private void renderEdits(Vec3 camera,Matrix4f view,Function<BlockPos,BlockState> stateAt,Predicate<BlockPos> loaded,BlockAndTintGetter tintWorld,double groundY,boolean mapCuts) {
         Minecraft mc = Minecraft.getInstance();
         Map<BlockPos, BlockState> changed = new HashMap<>(), holes = new HashMap<>();
         originals.forEach((pos, original) -> {
             if (pos.distToCenterSqr(camera) > 96 * 96 || !loaded.test(pos)) return;
             BlockState now = stateAt.apply(pos);
             if (now == original) return;
-            if (!now.isAir()) changed.put(pos, now);
+            if (!now.isAir()) { if(!mapCuts)changed.put(pos, now); }
             else if (!original.isAir()) holes.put(pos, original);
         });
         if (changed.isEmpty() && holes.isEmpty()) return;
@@ -72,6 +78,7 @@ public final class PhotoEditsRenderer {
             // Block vertices and collision coordinates remain exactly one metre apart.
             RenderSystem.enablePolygonOffset(); RenderSystem.polygonOffset(-1, -2);
             PoseStack matrices = new PoseStack();
+            if(mapCuts)matrices.translate(0,.5,0);
             changed.forEach((pos, state) -> {
                 // Chunk shaders use the daylight shade below once. Item/entity shaders add
                 // a second directional light pass, making photo-world blocks too dark.
@@ -83,6 +90,10 @@ public final class PhotoEditsRenderer {
                     BlockPos neighbour = pos.relative(outward);
                     if (holes.containsKey(neighbour) || changed.containsKey(neighbour) || !loaded.test(neighbour)) continue;
                     BlockState boundary = stateAt.apply(neighbour);
+                    if(mapCuts) {
+                        if(!dev.realworldmc.EarthBlocks.isMapBlock(boundary))continue;
+                        boundary=dev.realworldmc.EarthBlocks.cutMaterial(boundary);
+                    }
                     if (boundary.isAir()) {
                         // Thin scanned walls have no interior. Close only their far opening
                         // with a textured backing; never put a lid across the near opening.

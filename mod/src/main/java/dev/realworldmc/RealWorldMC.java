@@ -58,6 +58,9 @@ public class RealWorldMC implements ModInitializer {
 		PayloadTypeRegistry.playS2C().register(RegionsPayload.TYPE, RegionsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(PanoramaPayload.TYPE, PanoramaPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StreetEditsPayload.TYPE, StreetEditsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(MapEditsPayload.TYPE, MapEditsPayload.CODEC);
+        ServerTickEvents.END_SERVER_TICK.register(MapEdits::tick);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> MapEdits.clear());
         PayloadTypeRegistry.playC2S().register(PanoramaActionPayload.TYPE, PanoramaActionPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(PanoramaActionPayload.TYPE, (payload,context) -> context.server().execute(() -> PanoramaRoom.action(context.player(),payload)));
         ServerTickEvents.END_SERVER_TICK.register(PanoramaRoom::tick);

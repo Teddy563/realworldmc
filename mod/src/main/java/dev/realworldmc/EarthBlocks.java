@@ -81,4 +81,17 @@ public final class EarthBlocks {
 	public static boolean isMapBlock(BlockState state) {
 		return state.getBlock() instanceof MapBlock;
 	}
+
+    /** Real material for newly exposed cut faces; intact scanned surfaces stay invisible. */
+    public static BlockState cutMaterial(BlockState state) {
+        Block block=state.getBlock();
+        if(block==MAP_GRASS || block==MAP_DIRT)return Blocks.DIRT.defaultBlockState();
+        if(block==MAP_LEAVES)return Blocks.OAK_LOG.defaultBlockState();
+        if(block==MAP_ASPHALT)return Blocks.GRAY_CONCRETE.defaultBlockState();
+        if(block==MAP_PLASTER)return Blocks.WHITE_TERRACOTTA.defaultBlockState();
+        if(block==MAP_BRICK)return Blocks.BRICKS.defaultBlockState();
+        if(block==MAP_WOOD)return Blocks.OAK_PLANKS.defaultBlockState();
+        if(block==MAP_SAND)return Blocks.SANDSTONE.defaultBlockState();
+        return isMapBlock(state)?Blocks.STONE.defaultBlockState():state;
+    }
 }

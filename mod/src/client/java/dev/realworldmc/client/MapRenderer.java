@@ -140,6 +140,7 @@ public final class MapRenderer {
         releaseRetained();preserveLanding=false;
 		resetTiles();
 	}
+    public void invalidateDamage() { markDirty(t -> true); }
     private void releaseRetained() {
         if(retained==null)return;
         var old=retained;retained=null;
@@ -441,7 +442,7 @@ public final class MapRenderer {
 
 	/** A block changed on the client: if a map block appeared or vanished, re-mask affected tiles. */
 	public void onBlockChanged(BlockPos pos, BlockState before, BlockState after) {
-		if (current == null || EarthBlocks.isMapBlock(before) == EarthBlocks.isMapBlock(after)) return;
+		if (current == null || (!MapDamage.tracked(pos) && EarthBlocks.isMapBlock(before) == EarthBlocks.isMapBlock(after))) return;
 		markDirty(t -> t.contains(pos));
 	}
 
@@ -453,7 +454,7 @@ public final class MapRenderer {
 
 	private void markDirty(java.util.function.Predicate<MapTile> test) {
 		RenderSystem.recordRenderCall(() -> {
-			for (MapTile t : loaded.values()) if (t.data.fine && test.test(t)) t.dirty = true;
+			for (MapTile t : loaded.values()) if (test.test(t)) t.dirty = true;
 		});
 	}
 

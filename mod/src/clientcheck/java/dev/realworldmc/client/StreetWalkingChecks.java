@@ -13,7 +13,8 @@ final class StreetWalkingChecks {
     private com.sun.net.httpserver.HttpServer fixture;
     private final AtomicInteger photographs = new AtomicInteger();
     private int stage, ticks, total;
-    private boolean opened;
+    private boolean opened, mapChecked;
+    private volatile net.minecraft.core.BlockPos damagePosition;
     private double anchorX, anchorZ;
     private volatile Throwable serverFailure;
     void register() {
@@ -71,6 +72,28 @@ final class StreetWalkingChecks {
                 }
             }
             if(mc.player==null || mc.getSingleplayerServer()==null || mc.getOverlay()!=null)return;
+            if(stage==-1) {
+                if(damagePosition==null || !MapDamage.tracked(damagePosition))return;
+                var pos=damagePosition;
+                var bounds=new net.minecraft.world.phys.AABB(pos).inflate(1);
+                require(MapDamage.cuts(bounds,mc.level,0,0,0).size()==1,"Confirmed server damage reaches the actual client cut list");
+                server(mc,p->p.serverLevel().setBlockAndUpdate(pos,EarthBlocks.MAP_BRICK.defaultBlockState()));
+                stage=-2;return;
+            }
+            if(stage==-2) {
+                if(!mc.level.getBlockState(damagePosition).is(EarthBlocks.MAP_BRICK))return;
+                require(MapDamage.cuts(new net.minecraft.world.phys.AABB(damagePosition).inflate(1),mc.level,0,0,0).isEmpty(),"Restored map blocks remove their mesh cuts");
+                mapChecked=true;stage=0;
+            }
+            if(stage==0 && !mapChecked) {
+                server(mc,p->{
+                    var pos=p.blockPosition().above(2);damagePosition=pos;
+                    p.serverLevel().setBlockAndUpdate(pos,EarthBlocks.MAP_BRICK.defaultBlockState());
+                    p.serverLevel().setBlockAndUpdate(pos,net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                    MapEdits.snapshot(p);
+                });
+                stage=-1;return;
+            }
             if(stage==0) {
                 mc.setScreen(null);server(mc,p->{p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);PanoramaRoom.enter(p.createCommandSourceStack(),0,0);});stage=1;ticks=0;return;
             }
@@ -113,7 +136,7 @@ final class StreetWalkingChecks {
             if(stage==8) {
                 require(!PanoramaRenderer.INSTANCE.active(),"Back clears the Street View session");
                 require(mc.level.dimension().equals(net.minecraft.world.level.Level.OVERWORLD),"Back restores original dimension");
-                Files.writeString(Path.of("walking-check-result.txt"),"PASS: default free walking, 5x5 request boundary, delayed 6x6 transition, single prepared photo reuse, missing-link fallback, retreat cancellation and return cleanup");
+                Files.writeString(Path.of("walking-check-result.txt"),"PASS: server/client map damage sync and restoration, default free walking, 5x5 request boundary, delayed 6x6 transition, single prepared photo reuse, missing-link fallback, retreat cancellation and return cleanup");
                 fixture.stop(0);mc.stop();
             }
         }catch(Throwable failure){fail(mc,failure);}

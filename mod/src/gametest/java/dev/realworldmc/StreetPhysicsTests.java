@@ -241,6 +241,22 @@ public final class StreetPhysicsTests implements FabricGameTest {
         test.succeed();
     }
     @GameTest(template=EMPTY_STRUCTURE,timeoutTicks=200)
+    public void mapExplosionKeepsConfirmedMaterials(GameTestHelper test) {
+        var level=test.getLevel();
+        BlockPos center=test.absolutePos(new BlockPos(4,3,4));
+        for(int x=-2;x<=2;x++)for(int y=-2;y<=2;y++)level.setBlockAndUpdate(center.offset(x,y,0),EarthBlocks.MAP_BRICK.defaultBlockState());
+        level.explode(null,center.getX()+.5,center.getY()+.5,center.getZ()+.5,4,Level.ExplosionInteraction.TNT);
+        var history=MapEdits.storage(level);
+        test.assertTrue(level.getBlockState(center).isAir(),"TNT removes the collision block as well as its visible surface");
+        test.assertTrue(history.original.get(center.asLong()).is(EarthBlocks.MAP_BRICK),"Damage captures the actual original material");
+        var restored=StreetEdits.Storage.load(history.save(new CompoundTag(),level.registryAccess()),level.registryAccess());
+        test.assertTrue(restored.original.get(center.asLong()).is(EarthBlocks.MAP_BRICK),"Map damage persists across save/reload");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_BRICK.defaultBlockState()).is(Blocks.BRICKS),"Brick walls expose real brick faces");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_PLASTER.defaultBlockState()).is(Blocks.WHITE_TERRACOTTA),"Plaster walls do not expose generic dirt");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_STONE.defaultBlockState()).getRenderShape()==RenderShape.MODEL,"Cut surfaces have visible models");
+        test.succeed();
+    }
+    @GameTest(template=EMPTY_STRUCTURE,timeoutTicks=200)
     public void physicalGroundExplosionsAndSavedDamage(GameTestHelper test) throws Exception {
         // The vanilla GameTest preset creates only three dimensions. Decode the actual shipped
         // dimension and generate its blocks in an isolated area of the test world instead.

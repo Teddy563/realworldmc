@@ -1,11 +1,12 @@
 import jpeg from 'jpeg-js';
 // Official Street View Tiles API; never use Cesium's temporary terrain credential here.
 
-export function panoramaLayout(meta) {
+export function panoramaLayout(meta, maxWidth = 4096) {
+  if (![1024,2048,4096].includes(maxWidth)) throw new Error("Photo width must be 1024, 2048 or 4096.");
   const {imageWidth:w,imageHeight:h,tileWidth:tw,tileHeight:th}=meta;
   if (![w,h,tw,th].every(Number.isSafeInteger) || w<1 || h<1 || w>32768 || h>16384 || tw<1 || th<1 || tw>1024 || th>1024) throw new Error('Invalid panorama dimensions.');
   let zoom=5;
-  while(zoom>1 && (Math.ceil(w/2**(5-zoom))>4096 || Math.ceil(h/2**(5-zoom))>2048))zoom--;
+  while(zoom>1 && (Math.ceil(w/2**(5-zoom))>maxWidth || Math.ceil(h/2**(5-zoom))>maxWidth/2))zoom--;
   const width=Math.ceil(w/2**(5-zoom)),height=Math.ceil(h/2**(5-zoom));
   return {zoom,width,height,columns:Math.ceil(width/tw),rows:Math.ceil(height/th),tileWidth:tw,tileHeight:th};
 }
@@ -16,7 +17,10 @@ export function copyTile(output,layout,tile,x,y) {
   for(let row=0;row<height;row++)output.set(tile.data.subarray(row*tile.width*4,(row*tile.width+width)*4),((y0+row)*layout.width+x0)*4);
 }
 export class NativeStreetView {
-  constructor(key, fetchImpl = fetch) { this.key = key; this.fetch = fetchImpl; this.expiry = 0; }
+  constructor(key, fetchImpl = fetch, {maxWidth = 2048} = {}) {
+    if (![1024,2048,4096].includes(maxWidth)) throw new Error("Photo width must be 1024, 2048 or 4096.");
+    this.key = key; this.fetch = fetchImpl; this.expiry = 0; this.maxWidth=maxWidth; this.retryAfter=0;
+  }
   async session() {
     if (this.token && Date.now() < this.expiry) return this.token;
     if (!this.pending) this.pending = (async () => {
@@ -31,11 +35,18 @@ export class NativeStreetView {
     return this.pending;
   }
   async request(path, params) {
+    if(Date.now()<this.retryAfter)throw new Error("Street View provider is cooling down after a quota or service error.");
     const u = new URL('https://tile.googleapis.com/v1/streetview/'+path);
     u.searchParams.set('key',this.key); u.searchParams.set('session',await this.session());
     for (const [k,v] of Object.entries(params)) u.searchParams.set(k,String(v));
     const r = await this.fetch(u,{signal:AbortSignal.timeout(20000),redirect:'error'});
-    if (!r.ok) { if(r.status===401 || r.status===403) this.expiry=0; throw Object.assign(new Error(`Street View request failed (HTTP ${r.status}). Check coverage, quota and Map Tiles API access.`),{status:r.status}); }
+    if (!r.ok) {
+      if(r.status===429 || r.status>=500){
+        const retry=r.headers.get("Retry-After");
+        const seconds=/^\d+$/.test(retry??"")?Number(retry):Math.max(0,(Date.parse(retry)-Date.now())/1000);
+        this.retryAfter=Date.now()+Math.max(30,Math.min(86400,Number.isFinite(seconds)?seconds:30))*1000;
+      }
+      if(r.status===401 || r.status===403) this.expiry=0; throw Object.assign(new Error(`Street View request failed (HTTP ${r.status}). Check coverage, quota and Map Tiles API access.`),{status:r.status}); }
     return r;
   }
   async metadata(q) {
@@ -60,7 +71,7 @@ export class NativeStreetView {
     }
     const promise=(async()=>{
       const meta=await this.metadata(new URLSearchParams({pano}));
-      const layout=panoramaLayout(meta),output=Buffer.alloc(layout.width*layout.height*4);
+      const layout=panoramaLayout(meta,this.maxWidth),output=Buffer.alloc(layout.width*layout.height*4);
       const count=layout.columns*layout.rows;let next=0;
       async function worker(provider) {
         while(next<count){

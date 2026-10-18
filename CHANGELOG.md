@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3 (unreleased)
+
+- Added default Street View walking with a 5×5 free area, one requested destination prepared at the edge, a 6×6 transition and a 7×7 waiting boundary.
+- Reduced default photo tile use, bounded concurrent assembly and added rate-limit backoff.
+- Fixed optional Xaero loading, dimension isolation, dateline bounds, image ownership and visible map attribution. Deferred automatic city lookup.
+- Protected terrain uploads against stale generations and bounded pending uploads.
+- Updated all three build versions and documented current Google quotas and monthly free usage.
+
+See [release notes](docs/releases/v1.0.3.md).
+
+
 ## 1.0.2 (2026-10-16)
 
 - Clear local projection depth before drawing orbit and improve orbital depth precision to reduce terrain z-fighting.

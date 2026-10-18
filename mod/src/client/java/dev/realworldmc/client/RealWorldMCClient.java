@@ -14,6 +14,8 @@ public class RealWorldMCClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
         SetupScreen.register();
+        ClientTickEvents.END_CLIENT_TICK.register(dev.realworldmc.client.map.OsmTileCache::tick);
+        HudRenderCallback.EVENT.register((graphics, delta) -> dev.realworldmc.client.map.OsmTileCache.credits(graphics));
         CreativeFlight.register();
         SpaceFlight.register();
         ClientTickEvents.END_CLIENT_TICK.register(SpaceDestinations::tick);
@@ -34,7 +36,7 @@ public class RealWorldMCClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> onClientThread(client, () -> {panorama.clear();DistantHorizonsCompat.release();}));
         HudRenderCallback.EVENT.register((graphics,delta) -> panorama.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(RegionsPayload.TYPE, (payload, context) -> context.client().execute(() -> renderer.setRegions(payload)));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, renderer::clear));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, () -> { renderer.clear(); dev.realworldmc.client.map.OsmTileCache.clear(); }));
 		ClientTickEvents.END_CLIENT_TICK.register(renderer::tick);
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> renderer.onChunkLoaded(chunk.getPos()));
 		WorldRenderEvents.AFTER_ENTITIES.register(renderer::render);

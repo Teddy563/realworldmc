@@ -59,3 +59,41 @@ test('stitching crops padded right and bottom tiles instead of stretching the pa
  assert.deepEqual([...output.subarray(32,36)],[10,11,12,255]);
  assert.equal(output[8],0); // no wrap into the previous row's padding
 });
+
+test('balanced walking photos use eight tiles instead of twenty-eight',()=>{
+ const meta={imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512};
+ const balanced=panoramaLayout(meta,2048),high=panoramaLayout(meta,4096);
+ assert.equal(balanced.columns*balanced.rows,8);
+ assert.equal(high.columns*high.rows,28);
+ assert.throws(()=>panoramaLayout(meta,8192));
+});
+
+test('quota cooldown prevents repeated upstream tile requests',async()=>{
+ let requests=0;
+ const provider=new NativeStreetView('test-key',async url=>{
+  if(url.pathname.endsWith('createSession'))return Response.json({session:'test-session',expiry:Date.now()/1000+3600});
+  requests++;return new Response('',{status:429,headers:{'Retry-After':'120'}});
+ });
+ await assert.rejects(provider.request('tiles/2/0/0',{panoId:'example'}),/429/);
+ await assert.rejects(provider.request('tiles/2/1/0',{panoId:'example'}),/cooling down/);
+ assert.equal(requests,1);
+ assert.ok(provider.retryAfter>Date.now()+119000);
+});
+
+test('one panorama in flight coalesces consumers without retaining completed imagery',async()=>{
+ const jpeg=(await import('jpeg-js')).default;
+ const bytes=jpeg.encode({width:512,height:512,data:Buffer.alloc(512*512*4,255)},50).data;
+ let tiles=0,active=0,peak=0;
+ const provider=new NativeStreetView('test-key',async url=>{
+  if(url.pathname.endsWith('createSession'))return Response.json({session:'test-session',expiry:Date.now()/1000+3600});
+  if(url.pathname.endsWith('metadata'))return Response.json({panoId:'example',imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512});
+  tiles++;active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,5));active--;
+  return new Response(bytes);
+ });
+ const query=new URLSearchParams({pano:'example'});
+ const first=provider.panorama(query),second=provider.panorama(query);
+ await assert.rejects(provider.panorama(new URLSearchParams({pano:'other'})),/Another panorama/);
+ const [a,b]=await Promise.all([first,second]);
+ assert.strictEqual(a,b);assert.equal(tiles,8);assert.ok(peak<=3);assert.equal(provider.assembly,null);
+ const image=jpeg.decode(a,{useTArray:true});assert.equal(image.width,1664);assert.equal(image.height,832);
+});

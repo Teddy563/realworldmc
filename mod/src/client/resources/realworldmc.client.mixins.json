@@ -1,5 +1,6 @@
 {
   "required": true,
+  "plugin": "dev.realworldmc.client.map.MapMixinPlugin",
   "package": "dev.realworldmc.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [

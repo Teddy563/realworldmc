@@ -39,7 +39,7 @@ Windows x64 releases include the service runtime. macOS and Linux need Node.js 2
 | `/earth streetview` | Enter the nearest Street View photo |
 | `/earth back` | Return from Street View |
 
-**F5** changes the camera. In Street View, look toward a yellow arrow and tap **W** to travel. **V** toggles a small walking area. See [all controls](docs/controls.md).
+**F5** changes the camera. In Street View, **WASD** walks inside a 5×5 area; walking toward a connected stop prepares the next photo and crossing the outer boundary travels there. **V** toggles walking. See [all controls](docs/controls.md).
 
 ## Before you play
 

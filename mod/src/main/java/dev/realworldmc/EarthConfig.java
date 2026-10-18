@@ -23,6 +23,9 @@ public class EarthConfig {
     public boolean setupComplete = false;
     /** Show RealWorldMC controls/status above map credits; vanilla and other mods are unaffected. */
     public boolean actionBar = true;
+    /** Optional Xaero overlay, independent of OSM water generation. */
+    public boolean osmMap = true;
+    public String osmTileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
     /** Creative flight switches to an anchored globe view above this height over the region datum. */
     public boolean autoSpaceFlight = true;
     public double spaceEntryHeight = 2000;

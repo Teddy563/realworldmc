@@ -1,4 +1,5 @@
 {
+  "maxPhotoWidth": 2048,
   "browserKey": "YOUR_RESTRICTED_BROWSER_KEY",
   "tilesKey": ""
 }

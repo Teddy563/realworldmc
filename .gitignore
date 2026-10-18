@@ -36,3 +36,5 @@ mod-26.3/build/
 mod-26.3/.gradle/
 mod-26.3/run/
 mod-26.3/run-render-check/
+mod/run-map-check-*/
+mod/run-walking-check/

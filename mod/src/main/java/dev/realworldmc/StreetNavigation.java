@@ -1,7 +1,15 @@
 package dev.realworldmc;
 /** Headings are clockwise from geographic north. */
 public final class StreetNavigation {
-    public static final double WALK_HALF_WIDTH = 1.5;
+    public static final double WALK_HALF_WIDTH = 3.5;
+    public static final double WALK_PREPARE = 2.5;
+    public static final double WALK_TRANSITION = 3.0;
+    /** Heading of movement/displacement, independent of the camera look direction. */
+    public static double movementHeading(double x, double z) { return Math.toDegrees(Math.atan2(x, -z)); }
+    public static int walkingLink(double[] headings, double x, double z, double threshold) {
+        if (!Double.isFinite(x) || !Double.isFinite(z) || Math.max(Math.abs(x), Math.abs(z)) < threshold) return -1;
+        return closest(headings, movementHeading(x, z), 55);
+    }
     private StreetNavigation() {}
     public static double angleDistance(double a, double b) { return Math.abs(Math.IEEEremainder(a - b, 360)); }
     public static int closest(double[] headings, double heading, double limit) {

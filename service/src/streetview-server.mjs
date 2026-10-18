@@ -17,7 +17,7 @@ const assets = new Map([
   ['/streetview.mjs', ['../preview/streetview.mjs', 'text/javascript']],
   ['/navigation.mjs', ['./streetview-navigation.mjs', 'text/javascript']],
 ]);
-const native = tilesKey ? new NativeStreetView(tilesKey) : null;
+const native = tilesKey ? new NativeStreetView(tilesKey, fetch, {maxWidth:config.maxPhotoWidth ?? 2048}) : null;
 http.createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');

@@ -19,7 +19,7 @@ public abstract class MinimapFBORendererMixin {
     private void prepareMyTexturedColoredModalRect(MinimapRendererHelper helper, Matrix4f matrix, float x, float z, int textureX, int textureY, float width, float height, float textureWidth, float textureHeight, int texture, float red, float green, float blue, float alpha, MultiTextureRenderTypeRenderer renderer, Operation<Void> original,
             @Local(name = "xFloored") int xFloored,
             @Local(name = "zFloored") int zFloored) {
-        if (!OsmTileCache.draw(matrix, x + xFloored, z + zFloored, x, z, width, height, renderer::begin, new float[] {red, green, blue, alpha})) {
+        if (!OsmTileCache.draw(net.minecraft.client.Minecraft.getInstance().level == null ? null : net.minecraft.client.Minecraft.getInstance().level.dimension(), matrix, x + xFloored, z + zFloored, x, z, width, height, renderer::begin, new float[] {red, green, blue, alpha})) {
             original.call(helper, matrix, x, z, textureX, textureY, width, height, textureWidth, textureHeight, texture, red, green, blue, alpha, renderer);
         }
     }

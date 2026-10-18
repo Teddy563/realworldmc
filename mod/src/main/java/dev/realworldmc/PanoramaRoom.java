@@ -31,7 +31,7 @@ public final class PanoramaRoom {
     private static final class Session {
         JsonObject current, pending;
         int ticket, request, started, lastAction = -100;
-        boolean busy, preparing, walking;
+        boolean busy, preparing, walking = true, approach, terrainReady;
         EarthRegions.Region place;
         double x, z;
         double anchorX,anchorY,anchorZ;
@@ -50,7 +50,7 @@ public final class PanoramaRoom {
     }
     private static void fail(ServerPlayer p, Session s, int ticket, String message) {
         if (SESSIONS.get(p.getUUID()) != s || s.request != ticket) return;
-        s.busy = false; s.preparing = false; s.pending = null;
+        s.busy = false; s.preparing = false; s.pending = null; s.approach = false; s.terrainReady = false;
         if (!p.isRemoved()) { send(p,ticket,"error",message,0,0,0); say(p,message); }
     }
     public static int enter(CommandSourceStack src, double lat, double lon) {
@@ -72,6 +72,9 @@ public final class PanoramaRoom {
     }
     public static void action(ServerPlayer p, PanoramaActionPayload action) {
         Session s = SESSIONS.get(p.getUUID()); if (s == null) return;
+        if (action.action().equals("cancel") && s.approach && s.busy && action.ticket() == s.request) {
+            fail(p,s,s.request,"Walking destination cancelled."); return;
+        }
         if (action.action().equals("failed") && s.busy && action.ticket() == s.request) {
             fail(p,s,s.request,"Photo loading failed. Your previous location and photograph have been kept."); return;
         }
@@ -87,14 +90,18 @@ public final class PanoramaRoom {
             send(p,s.ticket,"movement",viewMetadata(s).toString(),s.anchorX,s.anchorY,s.anchorZ);
             return;
         }
-        if (!action.action().equals("next")) return;
+        boolean approaching = action.action().equals("approach");
+        if (!action.action().equals("next") && !approaching) return;
+        if (approaching && (!s.walking || !walkingTarget(p, s, action.pano(), StreetNavigation.WALK_PREPARE - .2))) {
+            send(p,s.ticket,"error","Move toward a connected photo at the walking edge.",0,0,0); return;
+        }
         int now = p.server.getTickCount();
         if (now - s.lastAction < 10) { send(p,s.ticket,"error","Please wait a moment before the next photo.",0,0,0); return; }
         if (!StreetNavigation.validPano(action.pano())) return;
         boolean linked = false;
         for (JsonElement e : s.current.getAsJsonArray("links")) if (e.getAsJsonObject().get("panoId").getAsString().equals(action.pano())) linked = true;
         if (!linked) return;
-        s.lastAction = now; request(p,s,"pano="+action.pano());
+        s.lastAction = now; s.approach = approaching; request(p,s,"pano="+action.pano());
     }
     private static final class NoPanoramaException extends Exception {}
     private static JsonObject metadata(String query) throws Exception {
@@ -113,7 +120,7 @@ public final class PanoramaRoom {
         data.add("links",links); return data;
     }
     private static void request(ServerPlayer p, Session s, String query) {
-        s.busy = true; s.preparing = false; s.origin = p.level().dimension(); s.started = p.server.getTickCount(); int ticket = s.request = ++nextTicket;
+        s.busy = true; s.preparing = false; s.terrainReady = false; s.origin = p.level().dimension(); s.started = p.server.getTickCount(); int ticket = s.request = ++nextTicket;
         send(p,ticket,"loading","Loading photo location and physical ground…",0,0,0);
         CompletableFuture.supplyAsync(() -> {
             try { return metadata(query); } catch (Exception e) { throw new java.util.concurrent.CompletionException(e); }
@@ -153,6 +160,13 @@ public final class PanoramaRoom {
         room.getChunkSource().getChunkFuture(x>>4,z>>4,ChunkStatus.FULL,true).whenComplete((result,error) -> p.server.execute(() -> {
             if (!live(p,s,ticket)) return;
             if (error != null || result == null || !result.isSuccess()) { fail(p,s,ticket,"Destination terrain could not load. Your previous location has been kept."); return; }
+            s.terrainReady = true;
+            if (!s.approach || walkingTarget(p,s,s.pending.get("panoId").getAsString(),StreetNavigation.WALK_TRANSITION)) commitPhoto(p,s,ticket);
+        }));
+    }
+    private static void commitPhoto(ServerPlayer p, Session s, int ticket) {
+        ServerLevel room = p.server.getLevel(ROOM);
+        int x = (int)Math.floor(s.x), z = (int)Math.floor(s.z);
             try {
                 saveReturn(p);
                 // Prefer street-level free space over a roof. Do not delete obstructions or repair craters.
@@ -161,12 +175,18 @@ public final class PanoramaRoom {
                 p.stopRiding(); p.teleportTo(room,s.x,s.walking ? s.groundY : y,s.z,p.getYRot(),p.getXRot());
                 movement(p,s);
                 s.anchorX=s.x;s.anchorY=y;s.anchorZ=s.z;
-                s.current = s.pending; s.pending = null; s.ticket = ticket; s.busy = false; s.preparing = false;
+                s.current = s.pending; s.pending = null; s.ticket = ticket; s.busy = false; s.preparing = false; s.approach = false; s.terrainReady = false;
                 StreetEdits.snapshot(p);
                 StreetEdits.importNearby(p);
                 send(p,ticket,"commit",viewMetadata(s).toString(),s.x,y,s.z);
             } catch (Exception e) { fail(p,s,ticket,"Could not enter Street View. Use /earth back if return-point recovery is needed."); }
-        }));
+    }
+    private static boolean walkingTarget(ServerPlayer p, Session s, String pano, double threshold) {
+        var links = s.current.getAsJsonArray("links");
+        double[] headings = new double[links.size()];
+        for (int i=0;i<headings.length;i++) headings[i]=links.get(i).getAsJsonObject().get("heading").getAsDouble();
+        int index=StreetNavigation.walkingLink(headings,p.getX()-s.anchorX,p.getZ()-s.anchorZ,threshold);
+        return index>=0 && links.get(index).getAsJsonObject().get("panoId").getAsString().equals(pano);
     }
     private static JsonObject viewMetadata(Session s) {
         JsonObject data = s.current.deepCopy();
@@ -246,6 +266,8 @@ public final class PanoramaRoom {
             if(s!=null && s.current!=null && p.isAlive() && p.level().dimension().equals(ROOM)){
                 p.stopRiding();p.stopFallFlying();p.setNoGravity(!s.walking);p.fallDistance=0;
                 if (p.getAbilities().flying) { p.getAbilities().flying=false;p.onUpdateAbilities(); }
+                if (s.approach && s.busy && s.terrainReady && s.pending != null
+                        && walkingTarget(p,s,s.pending.get("panoId").getAsString(),StreetNavigation.WALK_TRANSITION)) commitPhoto(p,s,s.request);
                 if (s.walking) {
                     double x=StreetNavigation.walkingCoordinate(p.getX(),s.anchorX), z=StreetNavigation.walkingCoordinate(p.getZ(),s.anchorZ);
                     if (StreetNavigation.outsideWalkingHeight(p.getY(),s.groundY)) {
@@ -261,7 +283,7 @@ public final class PanoramaRoom {
                 }
                 if (server.getTickCount()%5==0) collectNearby(p);
             }
-            if (s != null && s.busy && (server.getTickCount()-s.started>6000 || !p.level().dimension().equals(s.origin))) fail(p,s,s.request,"Street View travel cancelled or timed out. Your existing blocks have been kept.");
+            if (s != null && s.busy && (server.getTickCount()-s.started>(s.approach ? 1200 : 6000) || !p.level().dimension().equals(s.origin))) fail(p,s,s.request,"Street View travel cancelled or timed out. Your existing blocks have been kept.");
         }
     }
     static void collectNearby(ServerPlayer p) {

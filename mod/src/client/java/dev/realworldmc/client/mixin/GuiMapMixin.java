@@ -41,28 +41,18 @@ public class GuiMapMixin {
         }
     }
 
+    @org.spongepowered.asm.mixin.injection.Inject(method = "render", at = @At("TAIL"), remap = true)
+    private void mapCredits(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float delta, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        OsmTileCache.credits(graphics);
+    }
+
     @Unique
-    private static boolean drawTiles(Matrix4f matrix, float x, float y, float width, float height, int flooredCameraX, int flooredCameraZ, MultiTextureRenderTypeRenderer noLightRenderer) {
+    private boolean drawTiles(Matrix4f matrix, float x, float y, float width, float height, int flooredCameraX, int flooredCameraZ, MultiTextureRenderTypeRenderer noLightRenderer) {
         if (width > 512) return false; // just for safety if there is any kind of unlimited zoom option
         // x/y are blocks relative to the floored camera position
-        return OsmTileCache.draw(matrix, x + flooredCameraX, y + flooredCameraZ, x, y, width, height, noLightRenderer::begin, null);
+        var world = ((GuiMap) (Object) this).getMapProcessor().getMapWorld();
+        if (world == null) return false;
+        return OsmTileCache.draw(world.getCurrentDimensionId(), matrix, x + flooredCameraX, y + flooredCameraZ, x, y, width, height, noLightRenderer::begin, null);
     }
-
-    @ModifyVariable(method = "render", at = @At("STORE"), name = "biomeText", remap = false)
-    private String replaceBiomeText(String original,
-                                    @Local(name = "mousePosX") double mouseX,
-                                    @Local(name = "mousePosZ") double mouseZ) {
-        ClientLevel level = Minecraft.getInstance().level;
-        if (level == null || level.dimension() != Level.OVERWORLD) return original;
-        EarthRegions.Region region = MapProjection.regionAt(mouseX, mouseZ);
-        if (region == null) return original;
-        double[] geo = MapProjection.latLon(region, mouseX, mouseZ);
-        String name = MapProjection.cityAt(geo[0], geo[1]);
-        return name == null ? original : name;
-    }
-
-
-
-
 
 }

@@ -27,14 +27,14 @@ W/S move forward/back, A/D strafe, arrow up/down changes speed, and Space/Shift 
 
 1. Run `/earth streetview` while standing or flying in an Earth location. It searches within 500 metres of you.
 2. In a normal Minecraft world, supply coordinates: `/earth streetview 44.428583, 26.101115`. Coordinate searches use a 50-metre radius.
-3. Look at an arrow until it turns yellow, then tap **W** to travel. Arrow keys also travel between connected photos.
+3. Walk with **WASD**. Beyond the 5×5 area, a connected photo in your movement direction begins loading; crossing the 6×6 boundary travels when ready. Arrow keys also travel between connected photos.
 4. Place blocks, mine, use TNT, or spawn mobs as your gamemode allows.
 5. Run `/earth back` to return to your previous world and position.
 
 | Control | Action |
 |---|---|
-| V | Toggle a 3×3 block walking area; press again to recenter |
-| WASD | Walk when nearby walking is enabled; use arrow keys to change photos |
+| V | Toggle walking (enabled by default); fixed mode recentres the viewpoint |
+| WASD | Walk and approach connected stops; in fixed mode, look at a yellow arrow and tap W |
 | F5 | Cycle camera views in exploration and Street View; framing follows automatically |
 | F7 | Show full source credits |
 | F8 | Open the provider's image-report link |

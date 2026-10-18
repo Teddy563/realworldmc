@@ -1,31 +1,21 @@
 # Changelog
 
-- Smooth Street View walking at render-frame timing with gradual parallax limits; return to Earth at the current photo location with an upward camera transition and original-entry recovery command.
+## 1.0.3 (2026-10-18)
 
-- Street View: grounded photo projection, fades in both movement modes, building space inside the full 3×3 area, green controls with separate hint toggle, and bounded header-aware tile reuse with visible cache counts.
+- Integrate itzSelestia's Xaero minimap/world-map contribution, preserving the original commits; improve geographic overlays, caching and dimension isolation.
+- Add grounded 3×3 Street View walking, early directional photo preparation, a 5×5 waiting boundary and crossfades in both movement modes.
+- Fix incomplete smaller 360 panoramas by choosing their native tile zoom.
+- Animate Street View entry and return to Earth at the current photo location; retain original-entry recovery.
+- Add bounded header-aware tile reuse, cache counters, local monthly usage estimates and rate-limit backoff.
+- Improve scanned-building damage with saved block-volume cuts and textured edges; prevent regenerated terrain from becoming false player edits.
+- Replace help chat with a paged command guide and simplify the HUD with independent usage and control toggles.
+- Match the website palette with dark gray surfaces and green commands and accents; retain gray/yellow direction arrows and compact attribution.
+- Add an optional Sneak + Swap Offhand shortcut and independent camera controls.
+- Bound pending terrain uploads and reject stale results.
 
-## 1.0.3 (unreleased)
+Native Street View and the latest interface changes target Minecraft 1.21.1. Experimental 26.2/26.3 builds retain the browser companion. Panorama depth remains approximate; shader-specific volumetric cloud occlusion and automatic city labels remain unresolved/deferred.
 
-- Matched menus, HUD accents and command prefixes to the website palette, with dark gray backgrounds and readable green text.
-
-- Replaced player help chat output with a green, scene-visible paged command guide. Commands fill chat without executing; Esc returns to the game.
-
-- Fixed incomplete 360 images from smaller panoramas by selecting their actual native tile zoom. Added a matching camera transition into Street View, with gray navigation arrows and a yellow selected direction.
-
-- Enabled geographic Xaero maps in Street View, added bounded walking parallax and photo fades, and condensed the HUD into a scoreboard panel with an independent usage toggle.
-
-- Replaced whole-triangle damage masking with saved block-volume cuts and textured material edges; fixed new terrain filler protruding above scanned streets. See [building damage](docs/building-damage.md).
-- Stopped inferring Street View edits from regenerated terrain; retained ambiguous legacy records for recovery.
-
-- Added centered Street View imagery, early directional preparation, 3×3 walking transitions, a 5×5 waiting boundary, collision-free movement and arrival behind the next center.
-- Added the optional Sneak + Swap Offhand shortcut and local monthly API usage estimates controlled by /earth hud.
-- Reduced default photo tile use, bounded concurrent assembly and added rate-limit backoff.
-- Fixed optional Xaero loading, dimension isolation, dateline bounds, image ownership and visible map attribution. Deferred automatic city lookup.
-- Protected terrain uploads against stale generations and bounded pending uploads.
-- Updated all three build versions and documented current Google quotas and monthly free usage.
-
-See [release notes](docs/releases/v1.0.3.md).
-
+See [full release notes](docs/releases/v1.0.3.md) and [validation](docs/release-1.0.3.md).
 
 ## 1.0.2 (2026-10-16)
 

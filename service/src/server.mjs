@@ -8,6 +8,7 @@
 //   GET /stats
 
 import http from 'node:http';
+import {UsageMeter} from './usage.mjs';
 import { configureProvider } from './provider.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -57,6 +58,7 @@ const MARGIN = 16;  // extra columns around a superchunk for ground estimation
 export class EarthService {
   constructor(cfg) {
     this.cfg = cfg;
+    cfg.usage ??= new UsageMeter(path.join(serviceDir,'terrain-usage.json'));
     this.client = new TileClient(cfg);
     this.frames = new Map();
     this.superchunks = new Map();
@@ -301,6 +303,8 @@ export function createServer(service) {
         }
         case '/health':
           return json(res, { ok: true, name: 'RealWorldMC', instanceId: process.env.RWMC_INSTANCE_ID ?? '', version: serviceVersion, hasKey: !!service.cfg.apiKey, provider: service.cfg.cesiumToken ? 'cesium' : 'google' });
+        case '/usage':
+          return json(res, {...service.client.cfg.usage?.snapshot(),directGoogle:!service.cfg.cesiumToken && new URL(service.cfg.rootUrl).hostname==='tile.googleapis.com',available:!!service.client.cfg.usage?.snapshot().available});
         case '/stats':
           return json(res, { ...service.client.stats, nodes: service.client.nodes.size, decoded: service.client.decoded.map.size });
         case '/geocode':
@@ -348,6 +352,7 @@ export async function startTerrainServer() {
     console.warn('WARNING: no Google API key set. Put it into service/config.json ("apiKey").');
   }
   const service = new EarthService(cfg);
+  process.once('exit',()=>cfg.usage.flush());
   return createServer(service).listen(cfg.port, '127.0.0.1', () => {
     console.log(`RealWorldMC service listening on http://127.0.0.1:${cfg.port}  (tiles: ${new URL(cfg.rootUrl).host})`);
   });

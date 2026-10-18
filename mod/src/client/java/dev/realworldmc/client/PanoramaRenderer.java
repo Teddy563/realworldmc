@@ -47,6 +47,7 @@ public final class PanoramaRenderer {
     private int generation, ticket, pendingTicket;
     private NativeImage prepared;
     private JsonObject preparedMetadata;
+    private boolean arrivalGuard;
     private boolean forwardWasDown, approaching, cancelSent, walkBlocked;
     private int walkingDestination = -1;
     private long walkRetryAt;
@@ -66,11 +67,13 @@ public final class PanoramaRenderer {
     }
     public boolean active(){var level=Minecraft.getInstance().level;return session && level!=null && level.dimension().equals(PanoramaRoom.ROOM);}
     public boolean walking(){return walking;}
+    public int tilesPerPhoto(){return metadata!=null && metadata.has("rwmcTileCount")?metadata.get("rwmcTileCount").getAsInt():0;}
     /** Reuse the existing arrow bindings; duplicate registrations would steal photo navigation keys. */
     public KeyMapping flightSpeedKey(boolean faster) { return movement[faster ? 0 : 1]; }
     public double groundY(){return groundY;}
     public void clear(){
-        generation++;session=false;loading=false;metadata=null;status="";report="";copyright="";forwardWasDown=false;
+        if(Minecraft.getInstance().player!=null)Minecraft.getInstance().player.noPhysics=Minecraft.getInstance().player.isSpectator();
+        arrivalGuard=false;generation++;session=false;loading=false;metadata=null;status="";report="";copyright="";forwardWasDown=false;
         walking=false;walkingRequested=false;sourcesVisible=false;noticeUntil=0;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=0;walkBlocked=false;
         pendingTicket=0;ticket=0;discardPrepared();
         if(sphere!=null){sphere.close();sphere=null;}
@@ -94,9 +97,9 @@ public final class PanoramaRenderer {
             case "movement" -> {
                 if (session && payload.ticket()==ticket) {
                     viewSettings(payload);walkingRequested=false;
-                    mc.player.setNoGravity(!walking);mc.player.setDeltaMovement(0,0,0);
+                    mc.player.setNoGravity(true);mc.player.setDeltaMovement(0,0,0);
                     mc.player.setPos(anchorX,walking?groundY:anchorY,anchorZ);
-                    notice(walking?"Nearby walk: 5×5 blocks; cross the edge to travel • F5: experimental third person":"Photo viewpoint restored • V: nearby walk");
+                    notice(walking?"Nearby walk: 3×3 blocks; cross the edge to travel • F5: experimental third person":"Photo viewpoint restored • V: nearby walk");
                 }
             }
             case "loading" -> {generation++;discardPrepared();pendingTicket=payload.ticket();loading=true;status=payload.metadata();}
@@ -115,7 +118,7 @@ public final class PanoramaRenderer {
                     DynamicTexture texture=new DynamicTexture(prepared);prepared=null;texture.setFilter(true,false);mc.getTextureManager().register(TEXTURE,texture);
                     if(sphere!=null)sphere.close();sphere=next;preparedMetadata=null;
                     copyright=text(metadata,"copyright","Google");report=text(metadata,"reportProblemLink","");
-                    ticket=payload.ticket();session=true;loading=false;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=net.minecraft.Util.getMillis()+500;walkBlocked=false;forwardWasDown=mc.options.keyUp.isDown();
+                    arrivalGuard=session && walking;ticket=payload.ticket();session=true;loading=false;approaching=false;cancelSent=false;walkingDestination=-1;walkRetryAt=net.minecraft.Util.getMillis()+500;walkBlocked=false;forwardWasDown=mc.options.keyUp.isDown();
                     anchorX=payload.x();anchorY=payload.y();anchorZ=payload.z();
                     walkingRequested=false;notice("Street View ready · /earth back returns");
                     RealWorldMC.LOGGER.debug("Street View photograph committed at {}, {}, {}",anchorX,anchorY,anchorZ);
@@ -195,7 +198,8 @@ public final class PanoramaRenderer {
         try {
             RenderSystem.disableCull();RenderSystem.disableBlend();RenderSystem.disableDepthTest();RenderSystem.depthMask(false);RenderSystem.setShaderColor(1,1,1,1);
             RenderSystem.setShader(GameRenderer::getPositionTexShader);RenderSystem.setShaderTexture(0,TEXTURE);
-            var offset=cameraAnchor().subtract(ctx.camera().getPosition());
+            // Keep the photo at its capture point; walking selects the next stop without parallax.
+            var offset=net.minecraft.world.phys.Vec3.ZERO;
             sphere.bind();sphere.drawWithShader(new Matrix4f(ctx.positionMatrix()).setTranslation(0,0,0).translate((float)offset.x,(float)offset.y,(float)offset.z),ctx.projectionMatrix(),RenderSystem.getShader());
         }finally{
             VertexBuffer.unbind();RenderSystem.depthMask(mask);if(depth)RenderSystem.enableDepthTest();else RenderSystem.disableDepthTest();
@@ -224,17 +228,19 @@ public final class PanoramaRenderer {
     private void walkingTravel(Minecraft mc) {
         if (mc.screen != null) return;
         double dx=mc.player.getX()-anchorX, dz=mc.player.getZ()-anchorZ;
-        if (Math.max(Math.abs(dx),Math.abs(dz))<2.25) walkBlocked=false;
+        double distance=Math.max(Math.abs(dx),Math.abs(dz));
+        if(arrivalGuard) { if(distance<.8 || distance>=StreetNavigation.WALK_TRANSITION)arrivalGuard=false;else return; }
+        if (Math.max(Math.abs(dx),Math.abs(dz))<StreetNavigation.WALK_RETREAT) walkBlocked=false;
         int next=StreetNavigation.walkingLink(headings(),dx,dz,StreetNavigation.WALK_PREPARE);
         if (approaching && loading) {
-            boolean withdrew=Math.max(Math.abs(dx),Math.abs(dz))<2.25;
+            boolean withdrew=Math.max(Math.abs(dx),Math.abs(dz))<StreetNavigation.WALK_RETREAT;
             boolean changed=next>=0 && next!=walkingDestination;
             if (!cancelSent && pendingTicket!=ticket && (withdrew || changed)) { cancelSent=true; action(pendingTicket,"cancel",""); }
             return;
         }
         if (loading || walkBlocked || net.minecraft.Util.getMillis()<walkRetryAt || next<0) return;
         // Crossing the free-walk boundary explicitly selects one connected destination.
-        // Its photo loads while the player covers the remaining half-block to the transition.
+        // Its photo loads while the player covers the remaining half-metre to the transition.
         approaching=true; cancelSent=false; walkingDestination=next; loading=true; pendingTicket=ticket;
         status="Preparing the next photo in your walking direction…";
         action(ticket,"approach",metadata.getAsJsonArray("links").get(next).getAsJsonObject().get("panoId").getAsString());
@@ -246,7 +252,7 @@ public final class PanoramaRenderer {
             mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
         if(session && !active()){clear();return;}
         if(active() && mc.player!=null){
-            mc.player.setNoGravity(!walking);mc.player.fallDistance=0;
+            mc.player.setNoGravity(true);mc.player.fallDistance=0;
             mc.player.getAbilities().flying=false;
             if(walking){
                 walkingTravel(mc);
@@ -272,7 +278,9 @@ public final class PanoramaRenderer {
     }
     private void arrows(GuiGraphics g){
         Minecraft mc=Minecraft.getInstance();double heading=mc.gameRenderer.getMainCamera().getYRot()+180;
-        double[] directions=headings();int selected=selection(heading,25),cx=g.guiWidth()/2,cy=g.guiHeight()-77;
+        double[] directions=headings();
+        double walkX=mc.player.getX()-anchorX,walkZ=mc.player.getZ()-anchorZ;
+        int selected=walking && Math.max(Math.abs(walkX),Math.abs(walkZ))>.2?StreetNavigation.walkingLink(directions,walkX,walkZ,0):selection(heading,25),cx=g.guiWidth()/2,cy=g.guiHeight()-77;
         // Deliberately draw square pixels without texture filtering. The flattened ring resembles floor controls.
         String[] glyph={"0001000","0011100","0111110","1101011","1001001","0001000","0001000"};
         for(int i=0;i<directions.length;i++){
@@ -294,7 +302,7 @@ public final class PanoramaRenderer {
         g.drawString(mc.font,"Sources [F7]",5,h-12,(color&0xff000000)|0xdddddd,true);
         String label="Report a problem with this image [F8]";g.drawString(mc.font,label,Math.max(4,w-mc.font.width(label)-4),h-12,0xffffffff,true);
         if(sourcesVisible){
-            String details="Street View photo: "+copyright+"\nGround/terrain: Google 3D data where available; OpenStreetMap contributors (water data).\nRealWorldMC: Minecraft integration. Nearby walk and F5 use an approximate flat ground projection; photo walls have no measured depth.\nF7: close • F8: report photo";
+            String details="Street View photo: "+copyright+"\nGround/terrain: Google 3D data where available; OpenStreetMap contributors (water data).\nRealWorldMC: Minecraft integration. The photo stays centered; nearby walk selects the next stop within a 5×5 boundary. Photo walls have no measured depth.\nF7: close • F8: report photo";
             var lines=mc.font.split(Component.literal(details),Math.min(340,w-20));
             int top=h-38-lines.size()*10;
             g.fill(2,top-5,Math.min(350,w-8),h-33,0xd0202020);
@@ -303,7 +311,7 @@ public final class PanoramaRenderer {
         if(!mc.options.hideGui && mc.screen==null)arrows(g);
         if(!sourcesVisible)ActionBar.render(g,h-40,java.util.List.of(
             walking?"WASD: walk to next photo · Arrows: travel":ActionBar.key(mc.options.keyUp)+" / Arrows: travel",
-            ActionBar.key(walkKey)+(walking?": recenter":": nearby walk")+" · "+ActionBar.key(mc.options.keyTogglePerspective)+": camera",
-            "/earth back: return"));
+            ActionBar.key(walkKey)+(walking?": fixed center":": nearby walk")+" · "+ActionBar.key(mc.options.keyTogglePerspective)+": camera",
+            "/earth back: return"+(dev.realworldmc.EarthConfig.get().streetViewShortcut?" · "+ActionBar.key(mc.options.keyShift)+" + "+ActionBar.key(mc.options.keySwapOffhand):"")));
     }
 }

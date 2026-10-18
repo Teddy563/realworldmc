@@ -136,6 +136,7 @@ export class TileClient {
     const bytes = await this.fetchLimiter.run(async () => {
       for (let attempt = 0; ; attempt++) {
         this.stats.requests++;
+        if(new URL(url).hostname==='tile.googleapis.com')this.cfg.usage?.record(new URL(url).pathname.endsWith('/root.json')?'roots':'content');
         let res;
         try {
           res = await fetch(this.withKey(url), { signal: AbortSignal.timeout(30_000), redirect: 'error' });

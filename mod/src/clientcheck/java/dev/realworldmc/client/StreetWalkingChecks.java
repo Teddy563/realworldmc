@@ -38,7 +38,8 @@ final class StreetWalkingChecks {
             else if(path.equals("/native/metadata")) {
                 boolean east=query!=null && query.contains("pano=B");
                 body=("{\"panoId\":\""+(east?"B":"A")+"\",\"lat\":0,\"lng\":"+(east?"0.0001":"0")+",\"heading\":0,\"tilt\":90,\"roll\":0,\"copyright\":\"Synthetic test photograph\",\"links\":[{\"panoId\":\""+(east?"A":"B")+"\",\"heading\":"+(east?270:90)+"}]}").getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            } else if(path.equals("/ground")) body="{\"height\":0}".getBytes();
+            } else if(path.equals("/usage")) body="{\"available\":true,\"configured\":true,\"directGoogle\":true,\"requests\":24,\"tiles\":16,\"roots\":1,\"freeStreetTiles\":100000,\"free3dRoots\":1000}".getBytes();
+            else if(path.equals("/ground")) body="{\"height\":0}".getBytes();
             else if(path.equals("/render/select")) body="{\"tiles\":[],\"attribution\":[]}".getBytes();
             else {status=404;body="{\"code\":\"NO_TERRAIN_COVERAGE\"}".getBytes();}
             exchange.sendResponseHeaders(status,body.length);exchange.getResponseBody().write(body);exchange.close();
@@ -101,28 +102,37 @@ final class StreetWalkingChecks {
                 if(!PanoramaRenderer.INSTANCE.active())return;
                 require(PanoramaRenderer.INSTANCE.walking(),"Street View starts in walking mode");
                 anchorX=PanoramaRenderer.INSTANCE.cameraAnchor().x;anchorZ=PanoramaRenderer.INSTANCE.cameraAnchor().z;
-                require(photographs.get()==1,"One initial photograph");move(mc,2,0);stage=2;return;
+                require(photographs.get()==1,"One initial photograph");move(mc,.5,0);stage=2;return;
             }
             if(++ticks<30)return;
             if(stage==2) {
-                require(Math.abs(mc.player.getX()-anchorX-2)<.1,"Free movement is not pinned");
-                require(photographs.get()==1,"No requests inside the 5x5 area");move(mc,2.7,0);stage=3;return;
+                require(Math.abs(mc.player.getX()-anchorX-.5)<.1,"Free movement is not pinned");
+                require(photographs.get()==1,"No requests before the early preparation threshold");
+                server(mc,p->{
+                    var start=p.position();var wall=p.blockPosition().east();
+                    p.serverLevel().setBlockAndUpdate(wall,net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                    p.serverLevel().setBlockAndUpdate(wall.above(),net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+                    p.move(net.minecraft.world.entity.MoverType.SELF,new net.minecraft.world.phys.Vec3(1,1,0));
+                    require(Math.abs(p.getX()-start.x-1)<.01 && Math.abs(p.getY()-start.y)<.01,"Walking crosses blocks without vertical drift");
+                    p.setPos(start);
+                });move(mc,1.2,0);stage=3;return;
             }
             if(stage==3) {
                 if(photographs.get()<2)return;
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Prepared destination does not move the photograph early");
-                move(mc,3.2,0);stage=4;return;
+                move(mc,1.6,0);stage=4;return;
             }
             if(stage==4) {
                 if(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<5)return;
                 require(photographs.get()==2,"Prepared photograph reused at transition");
+                require(Math.abs(mc.player.getX()-(PanoramaRenderer.INSTANCE.cameraAnchor().x-1))<.15,"Walking arrival is one metre behind the next center");
                 anchorX=PanoramaRenderer.INSTANCE.cameraAnchor().x;anchorZ=PanoramaRenderer.INSTANCE.cameraAnchor().z;
-                move(mc,0,3.4);stage=5;return;
+                move(mc,0,2.5);stage=5;return;
             }
             if(stage==5) {
                 require(photographs.get()==2,"Missing south link causes no photo request");
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Missing link keeps the current stop");
-                move(mc,-2.7,0);stage=6;return;
+                move(mc,-1.2,0);stage=6;return;
             }
             if(stage==6) {
                 if(photographs.get()<3)return;
@@ -131,12 +141,18 @@ final class StreetWalkingChecks {
             if(stage==7) {
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Retreat cancels a prepared destination");
                 require(photographs.get()==3,"Cancelled destination does not start a retry loop");
-                server(mc,p->PanoramaRoom.exit(p.createCommandSourceStack()));stage=8;ticks=0;return;
+                require(ApiUsageHud.lines().stream().anyMatch(line->line.contains("100,000")),"Local usage HUD displays the monthly tile allowance");
+                mc.options.keyShift.setDown(true);EarthConfig.get().streetViewShortcut=false;
+                require(!StreetShortcut.press(org.lwjgl.glfw.GLFW.GLFW_KEY_F,0,org.lwjgl.glfw.GLFW.GLFW_PRESS),"Disabled shortcut does not consume offhand input");
+                EarthConfig.get().streetViewShortcut=true;
+                require(StreetShortcut.press(org.lwjgl.glfw.GLFW.GLFW_KEY_F,0,org.lwjgl.glfw.GLFW.GLFW_PRESS),"Shortcut returns from Street View");
+                mc.options.keyShift.setDown(false);stage=8;ticks=0;return;
             }
             if(stage==8) {
                 require(!PanoramaRenderer.INSTANCE.active(),"Back clears the Street View session");
+                require(!mc.player.noPhysics && !mc.player.isNoGravity(),"Return restores normal physics");
                 require(mc.level.dimension().equals(net.minecraft.world.level.Level.OVERWORLD),"Back restores original dimension");
-                Files.writeString(Path.of("walking-check-result.txt"),"PASS: server/client map damage sync and restoration, default free walking, 5x5 request boundary, delayed 6x6 transition, single prepared photo reuse, missing-link fallback, retreat cancellation and return cleanup");
+                Files.writeString(Path.of("walking-check-result.txt"),"PASS: server/client map damage sync and restoration, default free walking, early preparation, 3x3 transition and 5x5 waiting boundary, single prepared photo reuse, missing-link fallback, retreat cancellation and return cleanup");
                 fixture.stop(0);mc.stop();
             }
         }catch(Throwable failure){fail(mc,failure);}

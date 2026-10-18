@@ -20,9 +20,12 @@ public class RealWorldMCClient implements ClientModInitializer {
         SpaceFlight.register();
         ClientTickEvents.END_CLIENT_TICK.register(SpaceDestinations::tick);
         ActionBar.register();
+        ClientTickEvents.END_CLIENT_TICK.register(ApiUsageHud::tick);
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->onClientThread(client,ApiUsageHud::clear));
 		MapRenderer renderer = MapRenderer.INSTANCE;
         PanoramaRenderer panorama=PanoramaRenderer.INSTANCE;
         panorama.registerKeys();
+        dev.realworldmc.StreetWalkMotion.clientWalking = p -> p == Minecraft.getInstance().player && panorama.active() && panorama.walking();
         ClientPlayNetworking.registerGlobalReceiver(dev.realworldmc.PanoramaPayload.TYPE, (payload, context) -> context.client().execute(() -> panorama.receive(payload)));
         ClientPlayNetworking.registerGlobalReceiver(dev.realworldmc.MapEditsPayload.TYPE,(payload,context)->context.client().execute(()->MapDamage.receive(payload)));
         WorldRenderEvents.AFTER_ENTITIES.register(MapDamage::render);

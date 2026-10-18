@@ -21,7 +21,8 @@
     "SpaceWeatherMixin",
     "MinimapFBORendererMixin",
     "GuiMapMixin",
-    "SupportXaeroWorldmapMixin"
+    "SupportXaeroWorldmapMixin",
+    "StreetShortcutMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -17,14 +17,15 @@ export function copyTile(output,layout,tile,x,y) {
   for(let row=0;row<height;row++)output.set(tile.data.subarray(row*tile.width*4,(row*tile.width+width)*4),((y0+row)*layout.width+x0)*4);
 }
 export class NativeStreetView {
-  constructor(key, fetchImpl = fetch, {maxWidth = 2048} = {}) {
+  constructor(key, fetchImpl = fetch, {maxWidth = 2048, usage = null} = {}) {
     if (![1024,2048,4096].includes(maxWidth)) throw new Error("Photo width must be 1024, 2048 or 4096.");
-    this.key = key; this.fetch = fetchImpl; this.expiry = 0; this.maxWidth=maxWidth; this.retryAfter=0;
+    this.usage=usage; this.key = key; this.fetch = fetchImpl; this.expiry = 0; this.maxWidth=maxWidth; this.retryAfter=0;
   }
   async session() {
     if (this.token && Date.now() < this.expiry) return this.token;
     if (!this.pending) this.pending = (async () => {
       const u = new URL('https://tile.googleapis.com/v1/createSession'); u.searchParams.set('key', this.key);
+      this.usage?.record('session');
       const r = await this.fetch(u, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mapType:'streetview',language:'en-US',region:'RO'}), signal:AbortSignal.timeout(15000), redirect:'error' });
       if (!r.ok) throw new Error(`Street View Tiles access failed (HTTP ${r.status}). Check Map Tiles API and key restrictions.`);
       const data = await r.json();
@@ -39,6 +40,7 @@ export class NativeStreetView {
     const u = new URL('https://tile.googleapis.com/v1/streetview/'+path);
     u.searchParams.set('key',this.key); u.searchParams.set('session',await this.session());
     for (const [k,v] of Object.entries(params)) u.searchParams.set(k,String(v));
+    this.usage?.record(path.startsWith('tiles/')?'tiles':'metadata');
     const r = await this.fetch(u,{signal:AbortSignal.timeout(20000),redirect:'error'});
     if (!r.ok) {
       if(r.status===429 || r.status>=500){
@@ -59,7 +61,8 @@ export class NativeStreetView {
       if(!Number.isInteger(radius) || radius<1 || radius>1000)throw new Error('Search radius must be between 1 and 1000 metres.');
       params={lat,lng,radius};
     }
-    return (await this.request('metadata',params)).json();
+    const meta=await (await this.request('metadata',params)).json();
+    if(meta.imageWidth && meta.imageHeight && meta.tileWidth && meta.tileHeight){const layout=panoramaLayout(meta,this.maxWidth);meta.rwmcTileCount=layout.columns*layout.rows;}return meta;
   }
   async panorama(q) {
     const pano=q.get('pano');

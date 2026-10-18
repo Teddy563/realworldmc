@@ -31,6 +31,7 @@ public final class ActionBar {
         var lines=new ArrayList<net.minecraft.util.FormattedCharSequence>();
         int width=Math.min(290,graphics.guiWidth()-12);
         if(until>net.minecraft.Util.getMillis())lines.addAll(mc.font.split(status,width));
+        for(String usage:ApiUsageHud.lines())lines.addAll(mc.font.split(RWMessages.message(usage),width));
         for(String control:controls)lines.addAll(mc.font.split(RWMessages.message(control),width));
         int y=bottom-(lines.size()-1)*11;
         for(var line:lines){graphics.drawString(mc.font,line,5,y,0xffffffff,true);y+=11;}
@@ -52,11 +53,17 @@ public final class ActionBar {
             controls.add("/earth space return: back");
             controls.add("/rw moon · /rw mars · /rw earth");
         }
+        if(EarthConfig.get().streetViewShortcut && mc.player!=null && mc.player.onGround())controls.add(StreetShortcut.hint());
         return controls;
     }
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("streetkey")) {
+                if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
+                var cfg=EarthConfig.get();cfg.streetViewShortcut=words.length==2?!cfg.streetViewShortcut:words[2].equals("on");cfg.save();
+                var mc=Minecraft.getInstance();if(mc.player!=null)mc.player.displayClientMessage(RWMessages.message("Street View shortcut "+(cfg.streetViewShortcut?"on":"off")+". /earth streetkey on|off"),false);return false;
+            }
             if (words.length < 2 || words.length > 3 || !(words[0].equals("earth") || words[0].equals("rw")) || !words[1].equals("hud")) return true;
             if (words.length == 3 && !java.util.Set.of("on", "off").contains(words[2])) return true;
             var cfg = EarthConfig.get();

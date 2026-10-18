@@ -1,6 +1,18 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {NativeStreetView,panoramaLayout,copyTile} from '../src/streetview-native.mjs';
+test('usage records actual outbound attempts and distinguishes metadata from tiles',async()=>{
+ const events=[];
+ const provider=new NativeStreetView('test-key',async(url)=>url.pathname.endsWith('createSession')
+  ?Response.json({session:'session',expiry:Date.now()/1000+3600})
+  :Response.json({panoId:'example',imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512}),{usage:{record:kind=>events.push(kind)}});
+ const meta=await provider.metadata(new URLSearchParams({pano:'example'}));
+ assert.equal(meta.rwmcTileCount,8);
+ await provider.request('tiles/2/0/0',{panoId:'example'});
+ assert.deepEqual(events,['session','metadata','tiles']);
+ await assert.rejects(provider.panorama(new URLSearchParams({pano:'../invalid'})));
+ assert.equal(events.length,3);
+});
 test('native viewer coalesces sessions and bounds metadata and panorama IDs',async()=>{
  const calls=[];
  const provider=new NativeStreetView('test-key',async(url)=>{

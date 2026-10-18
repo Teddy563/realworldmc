@@ -40,6 +40,7 @@ public final class PanoramaRoom {
     }
     private record ReturnPoint(String dimension,double x,double y,double z,float yaw,float pitch,boolean invulnerable,boolean noGravity,boolean flying) {}
     private static Path file(ServerPlayer p) { return p.server.getWorldPath(LevelResource.ROOT).resolve("data/realworldmc-panorama/"+p.getUUID()+".json"); }
+    public static boolean walking(ServerPlayer p) { var s=SESSIONS.get(p.getUUID()); return s!=null && s.current!=null && s.walking && p.level().dimension().equals(ROOM); }
     public static boolean isRoom(Level level) { return level.dimension().equals(ROOM) || level.dimension().equals(LEGACY); }
     private static void say(ServerPlayer p, String text) { p.sendSystemMessage(RWMessages.message(text)); }
     private static void send(ServerPlayer p, int ticket, String phase, String data, double x, double y, double z) {
@@ -172,8 +173,16 @@ public final class PanoramaRoom {
                 // Prefer street-level free space over a roof. Do not delete obstructions or repair craters.
                 s.groundY = landingY(room,x,z);
                 double y = s.groundY + s.eyeHeight - p.getEyeHeight(net.minecraft.world.entity.Pose.STANDING);
-                p.stopRiding(); p.teleportTo(room,s.x,s.walking ? s.groundY : y,s.z,p.getYRot(),p.getXRot());
+                double entryX=s.x,entryZ=s.z;
+                var velocity=p.getDeltaMovement();
+                boolean continuing=s.walking && s.approach && s.current!=null;
+                if(continuing) {
+                    double dx=p.getX()-s.anchorX,dz=p.getZ()-s.anchorZ,length=Math.hypot(dx,dz);
+                    if(length>.001){entryX-=dx/length;entryZ-=dz/length;}
+                }
+                p.stopRiding(); p.teleportTo(room,entryX,s.walking ? s.groundY : y,entryZ,p.getYRot(),p.getXRot());
                 movement(p,s);
+                if(continuing)p.setDeltaMovement(velocity.x,0,velocity.z);
                 s.anchorX=s.x;s.anchorY=y;s.anchorZ=s.z;
                 s.current = s.pending; s.pending = null; s.ticket = ticket; s.busy = false; s.preparing = false; s.approach = false; s.terrainReady = false;
                 StreetEdits.snapshot(p);
@@ -196,7 +205,7 @@ public final class PanoramaRoom {
         return data;
     }
     private static void movement(ServerPlayer p, Session s) {
-        p.stopRiding();p.stopFallFlying();p.setNoGravity(!s.walking);
+        p.stopRiding();p.stopFallFlying();p.setNoGravity(true);
         p.setDeltaMovement(0,0,0);p.fallDistance=0;
         if (p.getAbilities().flying) { p.getAbilities().flying=false;p.onUpdateAbilities(); }
     }
@@ -238,7 +247,8 @@ public final class PanoramaRoom {
         ServerPlayer p = src.getPlayer(); if (p==null) return 0;
         try {
             var level = p.server.getLevel(LEGACY); if (level==null) return 0;
-            saveReturn(p); SESSIONS.remove(p.getUUID()); send(p,++nextTicket,"clear","",0,0,0);
+            saveReturn(p); SESSIONS.remove(p.getUUID());
+        p.noPhysics=p.isSpectator(); send(p,++nextTicket,"clear","",0,0,0);
             ReturnPoint saved = GSON.fromJson(Files.readString(file(p)),ReturnPoint.class);
             p.setNoGravity(saved.noGravity);
             p.getAbilities().flying=saved.flying && p.getAbilities().mayfly;p.onUpdateAbilities();
@@ -264,7 +274,7 @@ public final class PanoramaRoom {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             Session s = SESSIONS.get(p.getUUID());
             if(s!=null && s.current!=null && p.isAlive() && p.level().dimension().equals(ROOM)){
-                p.stopRiding();p.stopFallFlying();p.setNoGravity(!s.walking);p.fallDistance=0;
+                p.stopRiding();p.stopFallFlying();p.setNoGravity(true);p.fallDistance=0;
                 if (p.getAbilities().flying) { p.getAbilities().flying=false;p.onUpdateAbilities(); }
                 if (s.approach && s.busy && s.terrainReady && s.pending != null
                         && walkingTarget(p,s,s.pending.get("panoId").getAsString(),StreetNavigation.WALK_TRANSITION)) commitPhoto(p,s,s.request);

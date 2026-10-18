@@ -1,9 +1,10 @@
 package dev.realworldmc;
 /** Headings are clockwise from geographic north. */
 public final class StreetNavigation {
-    public static final double WALK_HALF_WIDTH = 3.5;
-    public static final double WALK_PREPARE = 2.5;
-    public static final double WALK_TRANSITION = 3.0;
+    public static final double WALK_HALF_WIDTH = 2.5;
+    public static final double WALK_PREPARE = 1.0;
+    public static final double WALK_TRANSITION = 1.5;
+    public static final double WALK_RETREAT = .75;
     /** Heading of movement/displacement, independent of the camera look direction. */
     public static double movementHeading(double x, double z) { return Math.toDegrees(Math.atan2(x, -z)); }
     public static int walkingLink(double[] headings, double x, double z, double threshold) {

@@ -1,4 +1,6 @@
 import http from 'node:http';
+import {fileURLToPath} from 'node:url';
+import {UsageMeter} from './usage.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { NativeStreetView } from './streetview-native.mjs';
@@ -17,7 +19,9 @@ const assets = new Map([
   ['/streetview.mjs', ['../preview/streetview.mjs', 'text/javascript']],
   ['/navigation.mjs', ['./streetview-navigation.mjs', 'text/javascript']],
 ]);
-const native = tilesKey ? new NativeStreetView(tilesKey, fetch, {maxWidth:config.maxPhotoWidth ?? 2048}) : null;
+const usage=new UsageMeter(path.join(process.env.RWMC_DATA_DIR ?? fileURLToPath(new URL('../',import.meta.url)), 'streetview-usage.json'));
+process.once('exit',()=>usage.flush());
+const native = tilesKey ? new NativeStreetView(tilesKey, fetch, {maxWidth:config.maxPhotoWidth ?? 2048,usage}) : null;
 http.createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -26,6 +30,7 @@ http.createServer(async (req, res) => {
   }
   if (req.method !== 'GET') { res.writeHead(405).end(); return; }
   const url = new URL(req.url, 'http://127.0.0.1:8766');
+  if(url.pathname==='/usage'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...usage.snapshot(),configured:!!tilesKey}));return;}
   if (url.pathname === '/health') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ok:true, name:'RealWorldMC Street View', instanceId:process.env.RWMC_INSTANCE_ID ?? '', hasKey:!!tilesKey})); return;

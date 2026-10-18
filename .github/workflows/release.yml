@@ -131,5 +131,12 @@ jobs:
           else
             args+=(--generate-notes)
           fi
-          gh release create "$RELEASE_TAG" downloads/* --verify-tag --draft --title "RealWorldMC $RELEASE_TAG" "${args[@]}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" downloads/* --clobber
+            if [[ -f "$notes" ]]; then
+              gh release edit "$RELEASE_TAG" --notes-file "$notes"
+            fi
+          else
+            gh release create "$RELEASE_TAG" downloads/* --verify-tag --draft --title "RealWorldMC $RELEASE_TAG" "${args[@]}"
+          fi
           gh release edit "$RELEASE_TAG" --draft=false

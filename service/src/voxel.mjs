@@ -269,11 +269,14 @@ export function voxelizeArea(frame, meshes, x0, z0, w, minY, height, opts = {}) 
       if (water?.isWater[i]) continue; // filled by carveWater
       const top = (g0[i] !== NONE && !isBuilding[i]) ? ground[i] - 1 : ground[i];
       const topIdx = Math.min(height - 1, Math.floor(top) - minY);
-      let visible = top;
+      let visible = Math.min(top, ground[i] - 1);
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         const xx = x + dx, zz = z + dz;
-        if ((dx || dz) && xx >= 0 && zz >= 0 && xx < w && zz < w) visible = Math.min(visible, solidTop[zz * w + xx]);
+        if ((dx || dz) && xx >= 0 && zz >= 0 && xx < w && zz < w) visible = Math.min(visible, solidTop[zz * w + xx] - 1);
       }
+      // solidTop is a voxel index, not the height of its photo surface. A neighbour's
+      // mesh can start at solidTop + 0.5; a cube at solidTop reaches +1 and protrudes.
+      // Keep the entire visible filler cube below that surface, including roof footprints.
       const visIdx = Math.min(topIdx, Math.floor(visible) - minY);
       for (let y = 0; y <= topIdx; y++) {
         const k = y * plane + i;

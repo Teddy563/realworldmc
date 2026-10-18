@@ -61,13 +61,22 @@ public final class MapRenderer {
 
 	/** All places of the world (from the server); null when not in an RealWorldMC world. */
 	private volatile List<EarthRegions.Region> regions;
+
+	/** Region metadata shared with optional map overlays. */
+	public List<EarthRegions.Region> getRegions() {
+		return regions;
+	}
+
 	/** Region the camera is in; tiles are only streamed for this one. */
 	private volatile EarthRegions.Region current;
+
+
 	/** Bumped whenever the region changes so stale downloads are dropped. */
 	private volatile int epoch;
 
 	private final Map<Integer, MapTile> loaded = new HashMap<>();
-	private final Set<Integer> loading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	private final Set<TileRequest> loading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private record TileRequest(int epoch, int id) {}
     private record Upload(int epoch,TileData data) {}
 	private final ConcurrentLinkedQueue<Upload> uploadQueue = new ConcurrentLinkedQueue<>();
 	/** Tiles drawn this frame. */
@@ -131,6 +140,7 @@ public final class MapRenderer {
         releaseRetained();preserveLanding=false;
 		resetTiles();
 	}
+    public void invalidateDamage() { markDirty(t -> true); }
     private void releaseRetained() {
         if(retained==null)return;
         var old=retained;retained=null;
@@ -138,11 +148,15 @@ public final class MapRenderer {
     }
 
 	private void resetTiles() {
-		epoch++;
+		synchronized (uploadQueue) {
+            epoch++;
+            uploadQueue.clear();
+            loading.clear();
+        }
 		current = null;
 		wanted = List.of();
 		displayed = new ArrayList<>();
-		uploadQueue.clear();
+        wantedIds = Set.of();
         List<MapTile> old;
         synchronized(loaded) {old=List.copyOf(loaded.values());loaded.clear();lastDrawn.clear();}
         RenderSystem.recordRenderCall(()->old.forEach(MapTile::close));
@@ -207,6 +221,13 @@ public final class MapRenderer {
                     for(int i=0;i<Math.min(2,t.chain().length);i++)ids.add(t.chain()[i]);
 				}
 				wantedIds = ids;
+                synchronized (uploadQueue) {
+                    uploadQueue.removeIf(upload -> {
+                        if (upload.epoch() == epoch && ids.contains(upload.data().id)) return false;
+                        loading.remove(new TileRequest(upload.epoch(), upload.data().id));
+                        return true;
+                    });
+                }
 				wanted = list;
 				status = "";
 				// Parents first: they are coarse, load fast and fill the view while the detail streams in.
@@ -227,17 +248,29 @@ public final class MapRenderer {
 		synchronized (loaded) {
 			if (loaded.containsKey(id)) return;
 		}
-		if (!loading.add(id)) return;
+		TileRequest request = new TileRequest(myEpoch, id);
+        if (loading.size() >= 128 || !loading.add(request)) return;
 		io.execute(() -> {
+			boolean queued = false;
 			try {
 				if (myEpoch != epoch || !wantedIds.contains(id)) return; // flew past it already
 				byte[] bytes = ServiceClient.getBytes(String.format(Locale.ROOT, "/render/tile?%s&id=%d",
 					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), id), Duration.ofSeconds(60));
-				if (myEpoch == epoch) uploadQueue.add(new Upload(myEpoch,TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ())));
+				if (myEpoch == epoch && wantedIds.contains(id)) {
+                    TileData data = TileData.parse(id, fine, bytes, o.offsetX(), o.offsetZ());
+                    synchronized (uploadQueue) {
+                        if (myEpoch == epoch && wantedIds.contains(id)) {
+                            uploadQueue.add(new Upload(myEpoch, data)); queued = true;
+                        }
+                    }
+                }
 			} catch (Exception e) {
 				RealWorldMC.LOGGER.warn("Tile {} failed: {}", id, e.toString());
 			} finally {
-				loading.remove(id);
+				// A queued tile stays "loading" until uploadAndSwitch takes it. Uploads only happen while the
+				// world renders (not behind e.g. Xaero's world map), and selection keeps running meanwhile;
+				// without this the same tiles were fetched again every selection until the heap ran out.
+				if (!queued) loading.remove(request);
 			}
 		});
 	}
@@ -248,6 +281,7 @@ public final class MapRenderer {
 		for (int i = 0; i < MAX_UPLOADS_PER_FRAME; i++) {
             Upload upload=uploadQueue.poll();
             if(upload==null)break;
+            loading.remove(new TileRequest(upload.epoch(), upload.data().id));
             if(upload.epoch()!=epoch)continue;
             TileData d=upload.data();
 			synchronized (loaded) {
@@ -408,7 +442,7 @@ public final class MapRenderer {
 
 	/** A block changed on the client: if a map block appeared or vanished, re-mask affected tiles. */
 	public void onBlockChanged(BlockPos pos, BlockState before, BlockState after) {
-		if (current == null || EarthBlocks.isMapBlock(before) == EarthBlocks.isMapBlock(after)) return;
+		if (current == null || (!MapDamage.tracked(pos) && EarthBlocks.isMapBlock(before) == EarthBlocks.isMapBlock(after))) return;
 		markDirty(t -> t.contains(pos));
 	}
 
@@ -420,10 +454,11 @@ public final class MapRenderer {
 
 	private void markDirty(java.util.function.Predicate<MapTile> test) {
 		RenderSystem.recordRenderCall(() -> {
-			for (MapTile t : loaded.values()) if (t.data.fine && test.test(t)) t.dirty = true;
+			for (MapTile t : loaded.values()) if (test.test(t)) t.dirty = true;
 		});
 	}
 
+    public boolean readyAt(double x,double z){return current!=null && current.index()==EarthRegions.indexAt(x,z) && !displayed.isEmpty();}
 	public int displayedCount() {
 		return displayed.size();
 	}

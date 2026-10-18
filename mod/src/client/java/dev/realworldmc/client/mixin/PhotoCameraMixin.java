@@ -18,6 +18,12 @@ public abstract class PhotoCameraMixin {
     @Shadow protected abstract void setRotation(float yaw,float pitch);
     @Inject(method="setup",at=@At("TAIL"))
     private void realworldmc$photoCamera(BlockGetter world,Entity entity,boolean thirdPerson,boolean mirrored,float partialTick,CallbackInfo ci) {
+        if(dev.realworldmc.client.StreetExitTransition.active() && entity==Minecraft.getInstance().player){
+            double lift=dev.realworldmc.client.StreetExitTransition.lift(),back=dev.realworldmc.client.StreetExitTransition.backDistance(),rise=lift*5;
+            var eye=entity.getEyePosition(partialTick);double yaw=Math.toRadians(entity.getViewYRot(partialTick));
+            setPosition(eye.x+Math.sin(yaw)*back,eye.y+rise,eye.z-Math.cos(yaw)*back);
+            setRotation(entity.getViewYRot(partialTick),(float)Math.toDegrees(Math.atan2(rise,back)));return;
+        }
         var photo=PanoramaRenderer.INSTANCE;
         var player=Minecraft.getInstance().player;
         if (!photo.active() || player==null || entity!=player) return;

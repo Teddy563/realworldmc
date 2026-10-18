@@ -27,7 +27,7 @@ public final class StreetPhysicsTests implements FabricGameTest {
         java.util.Map<String,Integer> colours=new java.util.HashMap<>();
         message.visit((style,text)->{ if(style.getColor()!=null)colours.put(text,style.getColor().getValue());return java.util.Optional.empty(); },net.minecraft.network.chat.Style.EMPTY);
         test.assertTrue(colours.get("RW")==RWMessages.GREEN && colours.get(" | ")==0x555555,"Brand prefix and separator colours");
-        test.assertTrue(colours.get("/earth setup")==0xffff55 && colours.get("/rw goto")==0xffff55 && colours.get("Try ")==0xffffff,"Commands yellow, body white");
+        test.assertTrue(colours.get("/earth setup")==RWMessages.GREEN && colours.get("/rw goto")==RWMessages.GREEN && colours.get("Try ")==0xffffff,"Commands use the brand text green, body white");
         var line=RWMessages.helpLine("/earth goto <place>","Travel");
         test.assertTrue(line.getSiblings().getFirst().getStyle().getClickEvent().getValue().equals("/earth goto "),"Help fills chat without executing a command");
         var player=test.makeMockServerPlayerInLevel();
@@ -221,6 +221,14 @@ public final class StreetPhysicsTests implements FabricGameTest {
         test.assertTrue(restored.original.get(wall.asLong()).is(Blocks.STONE),"Excavations must survive placement, another break, and save/reload");
         test.assertTrue(restored.original.get(placed.asLong()).isAir(),"Removing a block placed in empty space must not tear a hole in the photo");
         test.assertTrue(restored.importedChunks.contains(42L),"Legacy comparison must not run again over changed terrain");
+        saved.remove("trackingVersion");
+        var legacy=StreetEdits.Storage.load(saved,test.getLevel().registryAccess());
+        test.assertTrue(legacy.original.isEmpty(),"Inferred legacy differences must never redraw terrain as player builds");
+        var preserved=legacy.save(new CompoundTag(),test.getLevel().registryAccess());
+        test.assertTrue(preserved.getList("unverified_legacy_edits",net.minecraft.nbt.Tag.TAG_COMPOUND).size()==2,"Ambiguous records must remain recoverable");
+        legacy.record(wall,Blocks.BRICKS.defaultBlockState());
+        var migrated=StreetEdits.Storage.load(legacy.save(new CompoundTag(),test.getLevel().registryAccess()),test.getLevel().registryAccess());
+        test.assertTrue(migrated.original.get(wall.asLong()).is(Blocks.BRICKS),"Confirmed edits after migration must persist");
         var buffer=io.netty.buffer.Unpooled.buffer();
         try{
             var payload=new StreetEditsPayload(true,java.util.List.of(new StreetEditsPayload.Edit(wall.asLong(),net.minecraft.world.level.block.Block.getId(Blocks.STONE.defaultBlockState()))));
@@ -230,6 +238,22 @@ public final class StreetPhysicsTests implements FabricGameTest {
             boolean rejected=false;try{StreetEditsPayload.CODEC.decode(buffer);}catch(IllegalArgumentException expected){rejected=true;}
             test.assertTrue(rejected,"Unbounded edit packets must be rejected");
         }finally{buffer.release();}
+        test.succeed();
+    }
+    @GameTest(template=EMPTY_STRUCTURE,timeoutTicks=200)
+    public void mapExplosionKeepsConfirmedMaterials(GameTestHelper test) {
+        var level=test.getLevel();
+        BlockPos center=test.absolutePos(new BlockPos(4,3,4));
+        for(int x=-2;x<=2;x++)for(int y=-2;y<=2;y++)level.setBlockAndUpdate(center.offset(x,y,0),EarthBlocks.MAP_BRICK.defaultBlockState());
+        level.explode(null,center.getX()+.5,center.getY()+.5,center.getZ()+.5,4,Level.ExplosionInteraction.TNT);
+        var history=MapEdits.storage(level);
+        test.assertTrue(level.getBlockState(center).isAir(),"TNT removes the collision block as well as its visible surface");
+        test.assertTrue(history.original.get(center.asLong()).is(EarthBlocks.MAP_BRICK),"Damage captures the actual original material");
+        var restored=StreetEdits.Storage.load(history.save(new CompoundTag(),level.registryAccess()),level.registryAccess());
+        test.assertTrue(restored.original.get(center.asLong()).is(EarthBlocks.MAP_BRICK),"Map damage persists across save/reload");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_BRICK.defaultBlockState()).is(Blocks.BRICKS),"Brick walls expose real brick faces");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_PLASTER.defaultBlockState()).is(Blocks.WHITE_TERRACOTTA),"Plaster walls do not expose generic dirt");
+        test.assertTrue(EarthBlocks.cutMaterial(EarthBlocks.MAP_STONE.defaultBlockState()).getRenderShape()==RenderShape.MODEL,"Cut surfaces have visible models");
         test.succeed();
     }
     @GameTest(template=EMPTY_STRUCTURE,timeoutTicks=200)

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.3 (2026-10-18)
+
+- Integrate itzSelestia's Xaero minimap/world-map contribution, preserving the original commits; improve geographic overlays, caching and dimension isolation.
+- Add grounded 3×3 Street View walking, early directional photo preparation, a 5×5 waiting boundary and crossfades in both movement modes.
+- Fix incomplete smaller 360 panoramas by choosing their native tile zoom.
+- Animate Street View entry and return to Earth at the current photo location; retain original-entry recovery.
+- Add bounded header-aware tile reuse, cache counters, local monthly usage estimates and rate-limit backoff.
+- Improve scanned-building damage with saved block-volume cuts and textured edges; prevent regenerated terrain from becoming false player edits.
+- Replace help chat with a paged command guide and simplify the HUD with independent usage and control toggles.
+- Match the website palette with dark gray surfaces and green commands and accents; retain gray/yellow direction arrows and compact attribution.
+- Add an optional Sneak + Swap Offhand shortcut and independent camera controls.
+- Bound pending terrain uploads and reject stale results.
+
+Native Street View and the latest interface changes target Minecraft 1.21.1. Experimental 26.2/26.3 builds retain the browser companion. Panorama depth remains approximate; shader-specific volumetric cloud occlusion and automatic city labels remain unresolved/deferred.
+
+See [full release notes](docs/releases/v1.0.3.md) and [validation](docs/release-1.0.3.md).
+
 ## 1.0.2 (2026-10-16)
 
 - Clear local projection depth before drawing orbit and improve orbital depth precision to reduce terrain z-fighting.

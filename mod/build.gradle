@@ -17,11 +17,23 @@ loom {
 	}
 }
 
+repositories {
+    maven {
+        url "https://chocolateminecraft.com/maven"
+        name "Xaero's Maven"
+    }
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    modCompileOnly "xaero.minimap:xaerominimap-fabric-1.21.1:26.6.0"
+    modCompileOnly "xaero.map:xaeroworldmap-fabric-1.21.1:1.47.0"
+    def xaero = providers.gradleProperty("xaeroTestSet").getOrElse("none")
+    if (xaero in ["both", "minimap"]) modRuntimeOnly "xaero.minimap:xaerominimap-fabric-1.21.1:26.6.0"
+    if (xaero in ["both", "worldmap"]) modRuntimeOnly "xaero.map:xaeroworldmap-fabric-1.21.1:1.47.0"
 }
 
 processResources {
@@ -63,6 +75,12 @@ tasks.register('streetNavigationChecks', JavaExec) {
 	mainClass = 'dev.realworldmc.StreetNavigationChecks'
 }
 tasks.named('check') { dependsOn tasks.named('streetNavigationChecks') }
+tasks.register('meshCutChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.MeshCutChecks'
+}
+tasks.named('check') { dependsOn tasks.named('meshCutChecks') }
 tasks.register('setupChecks', JavaExec) {
     dependsOn tasks.named('checksClasses')
     classpath = sourceSets.checks.runtimeClasspath
@@ -182,5 +200,63 @@ tasks.named('runCreativeFlightCheck') {
     doLast {
         def result = layout.projectDirectory.file('run-flight-check/creative-flight-result.txt').asFile
         if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Flight check did not finish')
+    }
+}
+tasks.register('mapOverlayChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.MapOverlayChecks'
+}
+tasks.named('check') { dependsOn tasks.named('mapOverlayChecks') }
+loom.runs {
+    mapClientCheck {
+        client()
+        source sourceSets.clientcheck
+        runDir "run-map-check-${providers.gradleProperty('xaeroTestSet').getOrElse('none')}"
+        vmArg '-Drealworldmc.mapCheck=true'
+        programArg '--width'
+        programArg '640'
+        programArg '--height'
+        programArg '480'
+    }
+}
+tasks.named('runMapClientCheck') {
+    doFirst { delete layout.projectDirectory.file("run-map-check-${providers.gradleProperty('xaeroTestSet').getOrElse('none')}/map-check-result.txt") }
+    doLast {
+        def result = layout.projectDirectory.file("run-map-check-${providers.gradleProperty('xaeroTestSet').getOrElse('none')}/map-check-result.txt").asFile
+        if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Map client check did not finish')
+    }
+}
+tasks.named('runPhotoCheck') {
+    doFirst { delete layout.projectDirectory.file('run-photo-check/photo-check-result.txt') }
+    doLast {
+        def result = layout.projectDirectory.file('run-photo-check/photo-check-result.txt').asFile
+        if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Photo rendering check did not finish')
+    }
+}
+loom.runs {
+    streetWalkingCheck {
+        client()
+        source sourceSets.clientcheck
+        runDir 'run-walking-check'
+        vmArg '-Drealworldmc.walkingCheck=true'
+        programArg '--width'
+        programArg '640'
+        programArg '--height'
+        programArg '480'
+    }
+}
+tasks.named('runStreetWalkingCheck') {
+    dependsOn tasks.named('runGameTest')
+    doFirst {
+        delete layout.projectDirectory.file('run-walking-check/walking-check-result.txt')
+        copy {
+            from layout.buildDirectory.dir('run/gameTest/world')
+            into layout.projectDirectory.dir('run-walking-check/saves/walking-check')
+        }
+    }
+    doLast {
+        def result = layout.projectDirectory.file('run-walking-check/walking-check-result.txt').asFile
+        if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Street walking check did not finish')
     }
 }

@@ -1,5 +1,7 @@
 package dev.realworldmc.client;
 
+import dev.realworldmc.RWTheme;
+
 import dev.realworldmc.EarthConfig;
 import dev.realworldmc.RWMessages;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
@@ -28,12 +30,30 @@ public final class ActionBar {
     public static void render(GuiGraphics graphics, int bottom, List<String> controls) {
         var mc=Minecraft.getInstance();
         if(!EarthConfig.get().actionBar || mc.options.hideGui || mc.screen!=null)return;
+        float scale=.8f;
+        int width=Math.min(230,(int)((graphics.guiWidth()-12)/scale));
         var lines=new ArrayList<net.minecraft.util.FormattedCharSequence>();
-        int width=Math.min(290,graphics.guiWidth()-12);
-        if(until>net.minecraft.Util.getMillis())lines.addAll(mc.font.split(status,width));
-        for(String control:controls)lines.addAll(mc.font.split(RWMessages.message(control),width));
-        int y=bottom-(lines.size()-1)*11;
-        for(var line:lines){graphics.drawString(mc.font,line,5,y,0xffffffff,true);y+=11;}
+        if(until>net.minecraft.Util.getMillis()) {
+            String text=status.getString().replaceFirst("^RW \\| ","");
+            if(text.startsWith("Street View ready"))text="Ready";
+            var wrapped=mc.font.split(Component.literal(text),width-12);
+            lines.addAll(wrapped.subList(0,Math.min(2,wrapped.size())));
+        }
+        int statusEnd=lines.size();
+        for(String control:controls)lines.addAll(mc.font.split(Component.literal(control),width-12));
+        int controlsEnd=lines.size();
+        for(String usage:ApiUsageHud.lines())lines.addAll(mc.font.split(Component.literal(usage),width-12));
+        int height=16+lines.size()*11;
+        graphics.pose().pushPose();
+        graphics.pose().translate(5,Math.max(5,bottom-height*scale),0);
+        graphics.pose().scale(scale,scale,1);
+        graphics.fill(0,0,width,height,0xcc151715);
+        graphics.fill(0,0,width,14,RWTheme.SURFACE);
+        graphics.fill(0,0,2,height,RWTheme.BRAND);
+        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,RWTheme.GREEN,false);
+        int y=17;
+        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<statusEnd?RWTheme.GREEN:i<controlsEnd?RWTheme.TEXT:RWTheme.GREEN,false);y+=11;}
+        graphics.pose().popPose();
     }
     public static List<String> flightControls() {
         var mc=Minecraft.getInstance();var controls=new ArrayList<String>();
@@ -52,11 +72,34 @@ public final class ActionBar {
             controls.add("/earth space return: back");
             controls.add("/rw moon · /rw mars · /rw earth");
         }
+        if(EarthConfig.get().streetViewShortcut && mc.player!=null && mc.player.onGround())controls.add(StreetShortcut.hint());
         return controls;
     }
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw"))) {
+                var cfg=EarthConfig.get();var mc=Minecraft.getInstance();
+                if(words[1].equals("controls") && (words.length==2 || java.util.Set.of("on","off").contains(words[2]))) {
+                    cfg.controlsHud=words.length==2?!cfg.controlsHud:words[2].equals("on");cfg.save();return false;
+                }
+                if(words[1].equals("walk") && (words.length==2 || java.util.Set.of("on","off").contains(words[2]))) {
+                    if(PanoramaRenderer.INSTANCE.active())PanoramaRenderer.INSTANCE.requestWalking(words.length==2?!PanoramaRenderer.INSTANCE.walking():words[2].equals("on"));return false;
+                }
+                if(words[1].equals("camera") && words.length==3 && java.util.Set.of("first","back","front").contains(words[2])) {
+                    mc.options.setCameraType(words[2].equals("first")?net.minecraft.client.CameraType.FIRST_PERSON:words[2].equals("back")?net.minecraft.client.CameraType.THIRD_PERSON_BACK:net.minecraft.client.CameraType.THIRD_PERSON_FRONT);return false;
+                }
+            }
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("usage")) {
+                if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
+                var cfg=EarthConfig.get();cfg.usageHud=words.length==2?!cfg.usageHud:words[2].equals("on");cfg.save();
+                var mc=Minecraft.getInstance();if(mc.player!=null)mc.player.displayClientMessage(RWMessages.message("Usage panel "+(cfg.usageHud?"on":"off")+"."),false);return false;
+            }
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("streetkey")) {
+                if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
+                var cfg=EarthConfig.get();cfg.streetViewShortcut=words.length==2?!cfg.streetViewShortcut:words[2].equals("on");cfg.save();
+                var mc=Minecraft.getInstance();if(mc.player!=null)mc.player.displayClientMessage(RWMessages.message("Street View shortcut "+(cfg.streetViewShortcut?"on":"off")+". /earth streetkey on|off"),false);return false;
+            }
             if (words.length < 2 || words.length > 3 || !(words[0].equals("earth") || words[0].equals("rw")) || !words[1].equals("hud")) return true;
             if (words.length == 3 && !java.util.Set.of("on", "off").contains(words[2])) return true;
             var cfg = EarthConfig.get();

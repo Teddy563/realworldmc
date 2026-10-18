@@ -1,5 +1,7 @@
 package dev.realworldmc.client;
 
+import dev.realworldmc.RWTheme;
+
 import dev.realworldmc.EarthConfig;
 import dev.realworldmc.SetupCredentials;
 import dev.realworldmc.ServiceClient;
@@ -148,10 +150,13 @@ public final class SetupScreen extends Screen {
         }));
     }
     @Override public void onClose() { if (!busy) minecraft.setScreen(parent); }
+    @Override public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        g.fill(0,0,width,height,RWTheme.BACKGROUND);
+    }
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         super.render(g, mouseX, mouseY, delta);
         int x = width / 2 - 150;
-        g.drawCenteredString(font, title, width / 2, 15, 0xFFFFFFFF);
+        g.drawString(font, title, (width-font.width(title))/2, 15, RWTheme.GREEN, false);
         if (page == 0) {
             if (message.isBlank()) g.drawWordWrap(font, Component.literal("RealWorldMC starts its bundled map service. Add and test your keys here; no scripts or separate Node installation needed on Windows x64."), x, 39, 300, 0xFFFFFFFF);
 
@@ -163,6 +168,6 @@ public final class SetupScreen extends Screen {
         if (page == 3 && !saved && message.isBlank()) g.drawWordWrap(font, Component.literal(
             "Adds Minecraft water blocks using OpenStreetMap. OFF skips OSM requests. Existing chunks stay unchanged. "
             + (minecraft.level == null ? "Failed requests time out quickly and pause before retrying." : "Return to the title screen before saving.")), x, 76, 300, 0xFFFFFFFF);
-        if (!message.isBlank()) g.drawWordWrap(font, Component.literal(message), x, page == 0 ? 39 : 65, 300, passed || saved ? 0xFFA6E8B1 : 0xFFFFFFAA);
+        if (!message.isBlank()) g.drawWordWrap(font, Component.literal(message), x, page == 0 ? 39 : 65, 300, passed || saved ? RWTheme.GREEN : 0xFFFFFFAA);
     }
 }

@@ -25,6 +25,8 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
     private PlanetTravelChecks planetCheck;
     private static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     @Override public void onInitializeClient(){
+        if(Boolean.getBoolean("realworldmc.walkingCheck")) {new StreetWalkingChecks().register();return;}
+        if(Boolean.getBoolean("realworldmc.mapCheck")) {new MapClientChecks().register();return;}
         if(Boolean.getBoolean("realworldmc.creativeFlightCheck")) {new CreativeFlightChecks().register();return;}
         if(!Boolean.getBoolean("realworldmc.photoCheck"))return;
         ClientLifecycleEvents.CLIENT_STARTED.register(mc->GLFW.glfwHideWindow(mc.getWindow().getWindow()));
@@ -33,7 +35,7 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
             if(flightCheck!=null){flightCheck.tick(mc);return;}
             if(ran || mc.getOverlay()!=null || GameRenderer.getPositionTexShader()==null)return;
             ran=true;
-            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);SpaceViewChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, geographic scale, clipping and render-state restoration, orbital projection and stars, Moon and Mars textured hemispheres"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
+            try{CameraChecks.run(mc);check(mc);PhotoExcavationChecks.run(mc);MapExcavationChecks.run(mc);SpaceViewChecks.run(mc);Files.writeString(Path.of("photo-check-result.txt"),"PASS: first/rear/front camera switching and separation, panorama pixels, terrain colour mask, textured crater and TNT, exact map-wall holes and brick cut faces, geographic scale, clipping and render-state restoration, orbital projection and stars, Moon and Mars textured hemispheres"+(FabricLoader.getInstance().isModLoaded("iris")?", Iris dimension pipeline injection":" (vanilla pipeline)"));}
             catch(Throwable failure){failure.printStackTrace();try{Files.writeString(Path.of("photo-check-result.txt"),"FAIL: "+failure);}catch(Exception ignored){}}
             finally{
                 if(Boolean.getBoolean("realworldmc.planetTravelCheck")) {planetCheck=new PlanetTravelChecks();planetCheck.start(mc);}
@@ -43,7 +45,33 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
         });
     }
     private static void check(Minecraft mc) throws Exception {
+        var offset=PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,2,0),true);
+        require(offset.x>0 && offset.y==0,"Walking gives horizontal feedback without camera-height distortion");
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(100,0,100),true).length()<=.451,"Waiting and third person cannot stretch the photo without bounds");
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,0,0),false).length()==0,"Fixed mode stays centered");
+        var subject=new net.minecraft.world.entity.decoration.ArmorStand(null,0,64,0);
+        double last=0;
+        for(int tick=1;tick<=25;tick++) {
+            subject.xo=(tick-1)*.1;subject.yo=64;subject.zo=0;subject.setPos(tick*.1,64,0);
+            for(int frame=0;frame<=10;frame++) {
+                float partial=frame/10f;var feetAtFrame=PanoramaRenderer.renderFeet(subject,partial);
+                double expected=(tick-1)*.1+partial*.1;
+                require(Math.abs(feetAtFrame.x-expected)<.00001,"Photo uses the same interpolated position as the camera");
+                var value=PanoramaRenderer.projectionOffset(new net.minecraft.world.phys.Vec3(0,66.5,0),feetAtFrame,feetAtFrame.add(0,1.62,0),true);
+                require(value.x<=last+.00001 && last-value.x<.004,"Continuous walking has no tick jumps or correction reversal");last=value.x;
+            }
+        }
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(2,0,0),true).x>PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1.5,0,0),true).x,"Parallax eases beyond the walking edge without a hard plateau");
         var orientation=new org.joml.Matrix3f();
+        var capture=new net.minecraft.world.phys.Vec3(0,66.5,0);
+        var feet=new net.minecraft.world.phys.Vec3(0,64,0);
+        for(var camera:java.util.List.of(new net.minecraft.world.phys.Vec3(0,65.62,0),new net.minecraft.world.phys.Vec3(0,67,2.5),new net.minecraft.world.phys.Vec3(0,63,-2.5))) {
+            var projected=PanoramaRenderer.projectionOffset(capture,feet,camera,true);
+            require(Math.abs(camera.y+projected.y-2.5-feet.y)<.0001,"Photo ground meets the feet in first and third person");
+            require(Math.abs(camera.z+projected.z)<.0001,"Detached camera does not carry the floor with it");
+        }
+        require(dev.realworldmc.StreetEdits.cosmeticSoilChange(net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(),net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()),"Grass decay is not a floating player build");
+        require(!dev.realworldmc.StreetEdits.cosmeticSoilChange(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState()),"Placed grass blocks remain visible");
         var ground=PanoramaRenderer.photoPoint(orientation,2.5f,.5f,.75f);
         require(Math.abs(ground.y+2.5)<.0001 && Math.abs(ground.z+2.5)<.0001,"Photo ground must intersect a fixed 2.5 metre capture plane");
         var lower=PanoramaRenderer.photoPoint(orientation,1.5f,.5f,.75f);

@@ -1,6 +1,18 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {NativeStreetView,panoramaLayout,copyTile} from '../src/streetview-native.mjs';
+test('usage records actual outbound attempts and distinguishes metadata from tiles',async()=>{
+ const events=[];
+ const provider=new NativeStreetView('test-key',async(url)=>url.pathname.endsWith('createSession')
+  ?Response.json({session:'session',expiry:Date.now()/1000+3600})
+  :Response.json({panoId:'example',imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512}),{usage:{record:kind=>events.push(kind)}});
+ const meta=await provider.metadata(new URLSearchParams({pano:'example'}));
+ assert.equal(meta.rwmcTileCount,8);
+ await provider.request('tiles/2/0/0',{panoId:'example'});
+ assert.deepEqual(events,['session','metadata','tiles']);
+ await assert.rejects(provider.panorama(new URLSearchParams({pano:'../invalid'})));
+ assert.equal(events.length,3);
+});
 test('native viewer coalesces sessions and bounds metadata and panorama IDs',async()=>{
  const calls=[];
  const provider=new NativeStreetView('test-key',async(url)=>{
@@ -47,7 +59,7 @@ test('high-resolution panorama uses source tiles within bounded memory',()=>{
  const layout=panoramaLayout({imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512});
  assert.deepEqual(layout,{zoom:3,width:3328,height:1664,columns:7,rows:4,tileWidth:512,tileHeight:512});
  assert.equal(panoramaLayout({imageWidth:16384,imageHeight:8192,tileWidth:512,tileHeight:512}).width,4096);
- assert.equal(panoramaLayout({imageWidth:2048,imageHeight:1024,tileWidth:512,tileHeight:512}).zoom,5);
+ assert.equal(panoramaLayout({imageWidth:2048,imageHeight:1024,tileWidth:512,tileHeight:512}).zoom,2);
  assert.throws(()=>panoramaLayout({imageWidth:1e9,imageHeight:1e9,tileWidth:512,tileHeight:512}));
 });
 test('stitching crops padded right and bottom tiles instead of stretching the panorama',()=>{
@@ -58,4 +70,47 @@ test('stitching crops padded right and bottom tiles instead of stretching the pa
  assert.deepEqual([...output.subarray(0,8)],[10,11,12,255,20,21,22,255]);
  assert.deepEqual([...output.subarray(32,36)],[10,11,12,255]);
  assert.equal(output[8],0); // no wrap into the previous row's padding
+});
+
+test('balanced walking photos use eight tiles instead of twenty-eight',()=>{
+ const meta={imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512};
+ const balanced=panoramaLayout(meta,2048),high=panoramaLayout(meta,4096);
+ assert.equal(balanced.columns*balanced.rows,8);
+ assert.equal(high.columns*high.rows,28);
+ assert.throws(()=>panoramaLayout(meta,8192));
+});
+
+test('quota cooldown prevents repeated upstream tile requests',async()=>{
+ let requests=0;
+ const provider=new NativeStreetView('test-key',async url=>{
+  if(url.pathname.endsWith('createSession'))return Response.json({session:'test-session',expiry:Date.now()/1000+3600});
+  requests++;return new Response('',{status:429,headers:{'Retry-After':'120'}});
+ });
+ await assert.rejects(provider.request('tiles/2/0/0',{panoId:'example'}),/429/);
+ await assert.rejects(provider.request('tiles/2/1/0',{panoId:'example'}),/cooling down/);
+ assert.equal(requests,1);
+ assert.ok(provider.retryAfter>Date.now()+119000);
+});
+
+test('one panorama in flight coalesces consumers without retaining completed imagery',async()=>{
+ const jpeg=(await import('jpeg-js')).default;
+ const bytes=jpeg.encode({width:512,height:512,data:Buffer.alloc(512*512*4,255)},50).data;
+ let tiles=0,active=0,peak=0;
+ const provider=new NativeStreetView('test-key',async url=>{
+  if(url.pathname.endsWith('createSession'))return Response.json({session:'test-session',expiry:Date.now()/1000+3600});
+  if(url.pathname.endsWith('metadata'))return Response.json({panoId:'example',imageWidth:13312,imageHeight:6656,tileWidth:512,tileHeight:512});
+  tiles++;active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,5));active--;
+  return new Response(bytes);
+ });
+ const query=new URLSearchParams({pano:'example'});
+ const first=provider.panorama(query),second=provider.panorama(query);
+ await assert.rejects(provider.panorama(new URLSearchParams({pano:'other'})),/Another panorama/);
+ const [a,b]=await Promise.all([first,second]);
+ assert.strictEqual(a,b);assert.equal(tiles,8);assert.ok(peak<=3);assert.equal(provider.assembly,null);
+ const image=jpeg.decode(a,{useTArray:true});assert.equal(image.width,1664);assert.equal(image.height,832);
+});
+
+test('smaller contributor panorama retains the complete 360 degree image',()=>{
+ const layout=panoramaLayout({imageWidth:5504,imageHeight:2752,tileWidth:512,tileHeight:512},2048);
+ assert.deepEqual(layout,{zoom:2,width:1376,height:688,columns:3,rows:2,tileWidth:512,tileHeight:512});
 });

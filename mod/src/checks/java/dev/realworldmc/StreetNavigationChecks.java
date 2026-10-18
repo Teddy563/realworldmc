@@ -23,7 +23,7 @@ public final class StreetNavigationChecks {
         double[] dateline=Geo.geodeticToMc(0,179.999,0,0,-179.999,0);
         check(dateline[0]>200 && dateline[0]<230,"Date-line neighbours must stay nearby");
         check(StreetNavigation.walkingCoordinate(100000.7,100000)==100000.7,"Walking inside the area stays smooth at a distant origin");
-        check(StreetNavigation.walkingCoordinate(100003,100000)==100001.5 && StreetNavigation.walkingCoordinate(99996,100000)==99998.5,"Both walk boundaries remain 3 metres apart");
+        check(StreetNavigation.walkingCoordinate(100004,100000)==100002.5 && StreetNavigation.walkingCoordinate(99996,100000)==99997.5,"Outer safety boundary spans 5 metres");
         check(StreetNavigation.walkingCoordinate(Double.NaN,100000)==100000,"Invalid motion cannot escape the anchor");
         check(!StreetNavigation.outsideWalkingHeight(65.2,64) && StreetNavigation.outsideWalkingHeight(60,64),"Normal jumps work and deep craters trigger rescue");
         var fade=new CreditFade();fade.color(false,0);
@@ -34,6 +34,12 @@ public final class StreetNavigationChecks {
         var aFade=new CreditFade();var bFade=new CreditFade();aFade.color(false,0);bFade.color(false,0);
         for(int t=10;t<=120;t+=10)aFade.color(true,t);
         check(aFade.color(true,120)==bFade.color(true,120),"Fade must not depend on frame rate");
-        System.out.println("19 geographic, navigation, walking and credit-fade checks passed.");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.5,0,StreetNavigation.WALK_PREPARE)==-1,"No speculative loads before directional intent");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.6,0,StreetNavigation.WALK_PREPARE)==1,"East movement starts exactly one east destination");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.4,0,StreetNavigation.WALK_TRANSITION)==-1,"Loading does not teleport before the 3 by 3 boundary");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.8,0,StreetNavigation.WALK_TRANSITION)==1,"Crossing commits east destination");
+        check(StreetNavigation.walkingLink(new double[]{0},0,3.1,StreetNavigation.WALK_TRANSITION)==-1,"No forced travel when south link is missing");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},-1.8,0,StreetNavigation.WALK_TRANSITION)==3,"Sideways/backward movement uses displacement, not camera yaw");
+        System.out.println("25 geographic, navigation, walking and credit-fade checks passed.");
     }
 }

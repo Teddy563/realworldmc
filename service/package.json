@@ -1,6 +1,6 @@
 {
   "name": "realworldmc-service",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Local map streaming and terrain generation for RealWorldMC",
   "main": "src/server.mjs",
   "directories": {

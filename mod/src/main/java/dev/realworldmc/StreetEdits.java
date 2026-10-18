@@ -23,8 +23,11 @@ public final class StreetEdits {
     public static Storage storage(ServerLevel level){
         return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(Storage::new,Storage::load,null),"realworldmc_street_edits");
     }
+    public static boolean cosmeticSoilChange(BlockState before,BlockState after){
+        return (before.is(Blocks.GRASS_BLOCK)||before.is(Blocks.DIRT)) && (after.is(Blocks.GRASS_BLOCK)||after.is(Blocks.DIRT));
+    }
     public static void changed(ServerLevel level,BlockPos pos,BlockState before,BlockState after){
-        if(!level.dimension().equals(PanoramaRoom.ROOM) || before==after)return;
+        if(!level.dimension().equals(PanoramaRoom.ROOM) || before==after || cosmeticSoilChange(before,after))return;
         Storage data=storage(level);
         data.record(pos,before);
         var edit=new StreetEditsPayload.Edit(pos.asLong(),Block.getId(data.original.get(pos.asLong())));
@@ -42,49 +45,30 @@ public final class StreetEdits {
         });
         if(!batch.isEmpty())ServerPlayNetworking.send(player,new StreetEditsPayload(false,List.copyOf(batch)));
     }
-    /** Read-only comparison for saves made before edit tracking existed. Never regenerates live chunks. */
-    public static void importNearby(ServerPlayer player){
-        ServerLevel level=player.serverLevel();var center=player.chunkPosition();
-        for(int z=center.z-1;z<=center.z+1;z++)for(int x=center.x-1;x<=center.x+1;x++){
-            var chunk=level.getChunkSource().getChunk(x,z,ChunkStatus.FULL,false);
-            if(chunk instanceof LevelChunk loaded)importChunk(level,loaded);
-        }
-    }
-    public static void importChunk(ServerLevel level,LevelChunk chunk){
-        if(!level.dimension().equals(PanoramaRoom.ROOM) || !(level.getChunkSource().getGenerator() instanceof StreetChunkGenerator generator))return;
-        long key=chunk.getPos().toLong();Storage data=storage(level);
-        if(data.importedChunks.contains(key) || importing.contains(key) || level.players().stream().noneMatch(p->chunk.getPos().getMiddleBlockPosition((int)p.getY()).distToCenterSqr(p.position())<96*96))return;
-        importing.add(key);
-        boolean mapped=generator.regionFor(chunk.getPos().getMiddleBlockX(),chunk.getPos().getMiddleBlockZ())!=null;
-        CompletableFuture.supplyAsync(()->generator.fetch(chunk)).whenComplete((bytes,error)->level.getServer().execute(()->{
-            importing.remove(key);
-            if(error!=null || bytes==null || (mapped && bytes.length==0) || !level.hasChunk(chunk.getPos().x,chunk.getPos().z))return;
-            if(bytes.length!=0 && bytes.length!=chunk.getHeight()*256)return;
-            BlockPos.MutableBlockPos pos=new BlockPos.MutableBlockPos();int minY=chunk.getMinBuildHeight();
-            for(int y=minY;y<chunk.getMaxBuildHeight();y++)for(int z=0;z<16;z++)for(int x=0;x<16;x++){
-                pos.set(chunk.getPos().getMinBlockX()+x,y,chunk.getPos().getMinBlockZ()+z);
-                BlockState original=bytes.length==0
-                    ? (y>=64?Blocks.AIR:y==minY?Blocks.BEDROCK:y==63?Blocks.GRASS_BLOCK:Blocks.STONE).defaultBlockState()
-                    : generator.blockForCode(bytes[((y-minY)*16+z)*16+x]&255);
-                if(original!=chunk.getBlockState(pos))data.record(pos,original);
-            }
-            data.importedChunks.add(key);data.setDirty();
-            for(ServerPlayer p:level.players())if(chunk.getPos().getMiddleBlockPosition((int)p.getY()).distToCenterSqr(p.position())<96*96)snapshot(p);
-        }));
-    }
+    // A later provider response is not an original-state baseline. Never infer edits
+    // by comparing it with a saved chunk: coverage, LOD and fallback terrain change.
+    public static void importNearby(ServerPlayer player) { }
+    public static void importChunk(ServerLevel level,LevelChunk chunk) { }
     public static final class Storage extends SavedData {
         public final Map<Long,BlockState> original=new HashMap<>();
         public final Set<Long> importedChunks=new HashSet<>();
+        private ListTag unverified = new ListTag();
         public void record(BlockPos pos,BlockState before){if(original.putIfAbsent(pos.asLong(),before)==null)setDirty();}
         public static Storage load(CompoundTag tag,HolderLookup.Provider provider){
             Storage data=new Storage();ListTag list=tag.getList("edits",Tag.TAG_COMPOUND);
+            data.unverified=tag.getList("unverified_legacy_edits",Tag.TAG_COMPOUND);
+            if (tag.getInt("trackingVersion") < 2 && tag.getLongArray("importedChunks").length > 0) {
+                // Preserve ambiguous historical records for recovery, but do not draw them.
+                // Saved chunk blocks (including builds and excavations) are untouched.
+                data.unverified=list; list=new ListTag(); data.setDirty();
+            }
             for(int i=0;i<list.size();i++){CompoundTag entry=list.getCompound(i);data.original.put(entry.getLong("pos"),NbtUtils.readBlockState(provider.lookupOrThrow(Registries.BLOCK),entry.getCompound("original")));}
             for(long chunk:tag.getLongArray("importedChunks"))data.importedChunks.add(chunk);
             return data;
         }
         @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider provider){
             ListTag list=new ListTag();original.forEach((pos,state)->{CompoundTag entry=new CompoundTag();entry.putLong("pos",pos);entry.put("original",NbtUtils.writeBlockState(state));list.add(entry);});
-            tag.put("edits",list);tag.putLongArray("importedChunks",importedChunks.stream().mapToLong(Long::longValue).toArray());return tag;
+            tag.putInt("trackingVersion",2);tag.put("unverified_legacy_edits",unverified);tag.put("edits",list);tag.putLongArray("importedChunks",importedChunks.stream().mapToLong(Long::longValue).toArray());return tag;
         }
     }
 }

@@ -19,8 +19,6 @@ public final class TileData {
 		/** ABGR pixels as NativeImage expects them, or null. */
 		public int[] pixels; // released after upload
 		public final int fallbackAbgr;
-		/** Packed block position each triangle belongs to (fine tiles only). */
-		public long[] triangleCells;
 
 		Part(float[] vertices, int texWidth, int texHeight, int[] pixels, int fallbackAbgr) {
 			this.vertices = vertices;
@@ -74,18 +72,7 @@ public final class TileData {
 				tile.minY = Math.min(tile.minY, y); tile.maxY = Math.max(tile.maxY, y);
 				tile.minZ = Math.min(tile.minZ, z); tile.maxZ = Math.max(tile.maxZ, z);
 			}
-			if (fine) {
-				// Same cell convention as the voxelizer: a block at y covers mesh heights [y+0.5, y+1.5).
-				long[] cells = new long[part.triangleCount()];
-				for (int t = 0; t < cells.length; t++) {
-					int o = t * 15;
-					double cx = (v[o] + v[o + 5] + v[o + 10]) / 3 + ax;
-					double cy = (v[o + 1] + v[o + 6] + v[o + 11]) / 3 + ay;
-					double cz = (v[o + 2] + v[o + 7] + v[o + 12]) / 3 + az;
-					cells[t] = net.minecraft.core.BlockPos.asLong((int) Math.floor(cx), (int) Math.floor(cy - 0.5), (int) Math.floor(cz));
-				}
-				part.triangleCells = cells;
-			}
+
 		}
 		return tile;
 	}

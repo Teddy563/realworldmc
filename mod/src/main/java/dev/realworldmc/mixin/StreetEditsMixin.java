@@ -12,5 +12,6 @@ public abstract class StreetEditsMixin {
     @Inject(method="sendBlockUpdated",at=@At("HEAD"))
     private void realworldmc$recordEdit(BlockPos pos,BlockState before,BlockState after,int flags,CallbackInfo ci){
         StreetEdits.changed((ServerLevel)(Object)this,pos,before,after);
+        dev.realworldmc.MapEdits.changed((ServerLevel)(Object)this,pos,before,after);
     }
 }

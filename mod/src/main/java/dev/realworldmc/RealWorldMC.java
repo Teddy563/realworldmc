@@ -2,7 +2,6 @@ package dev.realworldmc;
 
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -27,8 +26,10 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -57,6 +58,9 @@ public class RealWorldMC implements ModInitializer {
 		PayloadTypeRegistry.playS2C().register(RegionsPayload.TYPE, RegionsPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(PanoramaPayload.TYPE, PanoramaPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StreetEditsPayload.TYPE, StreetEditsPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(MapEditsPayload.TYPE, MapEditsPayload.CODEC);
+        ServerTickEvents.END_SERVER_TICK.register(MapEdits::tick);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> MapEdits.clear());
         PayloadTypeRegistry.playC2S().register(PanoramaActionPayload.TYPE, PanoramaActionPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(PanoramaActionPayload.TYPE, (payload,context) -> context.server().execute(() -> PanoramaRoom.action(context.player(),payload)));
         ServerTickEvents.END_SERVER_TICK.register(PanoramaRoom::tick);
@@ -92,7 +96,7 @@ public class RealWorldMC implements ModInitializer {
                     ctx.getSource().sendSuccess(() -> RWMessages.message("Open RealWorldMC setup on your Minecraft title screen. The updated client opens it with /earth setup. Do not enter keys in chat."), false);
                     return 1;
                 }))
-                .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
+                .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))
                 .then(Commands.literal("moon").executes(ctx -> spaceHelp(ctx.getSource())))
                 .then(Commands.literal("mars").executes(ctx -> spaceHelp(ctx.getSource())))
                 .then(Commands.literal("earth").executes(ctx -> spaceHelp(ctx.getSource())))
@@ -111,7 +115,7 @@ public class RealWorldMC implements ModInitializer {
                     .then(Commands.argument("coordinates", StringArgumentType.greedyString())
                         .executes(ctx -> streetView(ctx.getSource(), StringArgumentType.getString(ctx, "coordinates"))))
                     .then(Commands.literal("exit").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
-                    .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
+                    .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))
                     .then(Commands.literal("legacy").executes(ctx -> PanoramaRoom.legacy(ctx.getSource())))
                     .then(Commands.literal("height").then(Commands.argument("metres", DoubleArgumentType.doubleArg(1,4))
                         .executes(ctx -> PanoramaRoom.cameraHeight(ctx.getSource(),DoubleArgumentType.getDouble(ctx,"metres")))))
@@ -179,9 +183,14 @@ public class RealWorldMC implements ModInitializer {
             .append(RWMessages.helpLine("/earth hud", "Show or hide the bottom-left controls and status"))
             .append(RWMessages.helpLine("/earth goto <place or lat, lon>", "Travel to a real place"))
             .append(RWMessages.helpLine("/earth where", "Your coordinates and map link"))
+            .append(RWMessages.helpLine("/earth controls on|off", "Show or hide key hints"))
+            .append(RWMessages.helpLine("/earth walk on|off", "Nearby walking or fixed center"))
+            .append(RWMessages.helpLine("/earth camera first|back|front", "Choose camera perspective"))
+            .append(RWMessages.helpLine("/earth usage on|off", "Toggle usage counts independently of /earth hud"))
+            .append(RWMessages.helpLine("/earth streetkey on|off", "Toggle Sneak + Swap Offhand shortcut (empty hands)"))
             .append(RWMessages.helpLine("/earth streetview", "Nearest photo within 500 metres"))
             .append(RWMessages.helpLine("/earth streetview <lat, lon>", "Photo at chosen coordinates"))
-            .append(RWMessages.helpLine("/earth back", "Return from Street View"))
+            .append(RWMessages.helpLine("/earth back", "Earth view at your current Street View location"))
             .append(RWMessages.helpLine("/earth help more", "Camera height, browser and world settings"))
             .append(RWMessages.text("\n  F5: camera · Arrows / W: photo travel · V: nearby walk\n  F7: credits · F8: report photo · /rw works as an alias."));
         src.sendSuccess(() -> help, false);
@@ -246,7 +255,7 @@ public class RealWorldMC implements ModInitializer {
 		double[] g=currentCoordinates(src);
 		if(g==null){src.sendFailure(RWMessages.message("This is not a RealWorldMC place."));return 0;}
 		String link = String.format(Locale.ROOT, "https://www.google.com/maps/@%.6f,%.6f,19z", g[0], g[1]);
-		src.sendSuccess(() -> RWMessages.message(String.format(Locale.ROOT, "You are at %.6f, %.6f  ", g[0], g[1]))
+        src.sendSuccess(() -> RWMessages.message(String.format(Locale.ROOT, "You are at %.6f, %.6f  ", g[0], g[1]))
 			.append(Component.literal(link).withStyle(s -> s.withColor(ChatFormatting.AQUA).withUnderlined(true)
 				.withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.OPEN_URL, link)))), false);
 		return 1;

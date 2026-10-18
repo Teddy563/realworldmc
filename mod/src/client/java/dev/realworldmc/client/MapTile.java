@@ -8,11 +8,9 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import dev.realworldmc.EarthBlocks;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.world.phys.AABB;
 
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
@@ -21,7 +19,6 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL30;
 
-import java.util.BitSet;
 
 /** GPU side of a tile: one vertex buffer + texture per glTF primitive. Render thread only. */
 public final class MapTile {
@@ -29,17 +26,23 @@ public final class MapTile {
 	public final AABB bounds;
 	private final VertexBuffer[] buffers;
 	private final DynamicTexture[] textures;
-	private final BitSet[] hidden;
+	private java.util.List<dev.realworldmc.MeshCut.Box> cuts;
+    private dev.realworldmc.MeshCut.Index cutIndex;
 	private final boolean[] empty;
 	public boolean dirty;
 
 	public MapTile(TileData data, ClientLevel level) {
+        this(data,MapDamage.cuts(new AABB(data.minX,data.minY,data.minZ,data.maxX,data.maxY,data.maxZ),level,data.anchorX,data.anchorY,data.anchorZ));
+    }
+    static MapTile withCuts(TileData data,java.util.List<dev.realworldmc.MeshCut.Box> damage) {return new MapTile(data,damage);}
+    private MapTile(TileData data, java.util.List<dev.realworldmc.MeshCut.Box> damage) {
 		this.data = data;
 		this.bounds = new AABB(data.minX, data.minY, data.minZ, data.maxX, data.maxY, data.maxZ);
 		int n = data.parts.length;
 		buffers = new VertexBuffer[n];
 		textures = new DynamicTexture[n];
-		hidden = new BitSet[n];
+		cuts=java.util.List.copyOf(damage);
+        cutIndex=new dev.realworldmc.MeshCut.Index(cuts);
 		empty = new boolean[n];
 		for (int i = 0; i < n; i++) {
 			TileData.Part part = data.parts[i];
@@ -57,7 +60,7 @@ public final class MapTile {
 			enableMipmaps(textures[i].getId(), image.getWidth(), image.getHeight());
 			part.pixels = null;
 			buffers[i] = new VertexBuffer(VertexBuffer.Usage.STATIC);
-			hidden[i] = computeHidden(part, level);
+
 			upload(i);
 		}
 	}
@@ -83,64 +86,48 @@ public final class MapTile {
 		}
 	}
 
-	/** Triangles whose block is no longer a map block (mined) are not drawn. */
-	private BitSet computeHidden(TileData.Part part, ClientLevel level) {
-		BitSet set = new BitSet();
-		if (part.triangleCells == null || level == null) return set;
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		int lastCx = Integer.MIN_VALUE, lastCz = Integer.MIN_VALUE;
-		boolean chunkLoaded = false;
-		for (int t = 0; t < part.triangleCells.length; t++) {
-			pos.set(part.triangleCells[t]);
-			int cx = SectionPos.blockToSectionCoord(pos.getX()), cz = SectionPos.blockToSectionCoord(pos.getZ());
-			if (cx != lastCx || cz != lastCz) {
-				lastCx = cx;
-				lastCz = cz;
-				chunkLoaded = level.hasChunk(cx, cz);
-			}
-			if (chunkLoaded && pos.getY() >= level.getMinBuildHeight() && pos.getY() < level.getMaxBuildHeight()
-				&& !EarthBlocks.isMapBlock(level.getBlockState(pos))) {
-				set.set(t);
-			}
-		}
-		return set;
-	}
+    /** Rebuild only when confirmed damage volumes change, including coarse fallback tiles. */
+    public void refresh(ClientLevel level) {
+        dirty=false;
+        var now=MapDamage.cuts(bounds,level,data.anchorX,data.anchorY,data.anchorZ);
+        if(now.equals(cuts))return;
+        cuts=now;cutIndex=new dev.realworldmc.MeshCut.Index(cuts);
+        for(int i=0;i<data.parts.length;i++)upload(i);
+    }
 
-	/** Re-evaluates mined triangles; re-uploads only parts that changed. */
-	public void refresh(ClientLevel level) {
-		dirty = false;
-		if (!data.fine) return;
-		for (int i = 0; i < data.parts.length; i++) {
-			BitSet now = computeHidden(data.parts[i], level);
-			if (!now.equals(hidden[i])) {
-				hidden[i] = now;
-				upload(i);
-			}
-		}
-	}
-
-	private void upload(int i) {
-		TileData.Part part = data.parts[i];
-		float[] v = part.vertices;
-		int tris = part.triangleCount() - hidden[i].cardinality();
-		empty[i] = tris == 0;
-		if (empty[i]) return;
-		try (ByteBufferBuilder bytes = new ByteBufferBuilder(tris * 3 * DefaultVertexFormat.POSITION_TEX.getVertexSize())) {
-			BufferBuilder bb = new BufferBuilder(bytes, VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX);
-			for (int t = 0, n = part.triangleCount(); t < n; t++) {
-				if (hidden[i].get(t)) continue;
-				for (int k = 0; k < 3; k++) {
-					int o = (t * 3 + k) * 5;
-					bb.addVertex(v[o], v[o + 1], v[o + 2]).setUv(v[o + 3], v[o + 4]);
-				}
-			}
-			try (MeshData mesh = bb.buildOrThrow()) {
-				buffers[i].bind();
-				buffers[i].upload(mesh);
-				VertexBuffer.unbind();
-			}
-		}
-	}
+    private void upload(int i) {
+        float[] source=data.parts[i].vertices;
+        var vertices=cuts.isEmpty()?null:new it.unimi.dsi.fastutil.floats.FloatArrayList(source.length);
+        for(int offset=0;vertices!=null && offset<source.length;offset+=15) {
+            double minX=Math.min(source[offset],Math.min(source[offset+5],source[offset+10]));
+            double maxX=Math.max(source[offset],Math.max(source[offset+5],source[offset+10]));
+            double minY=Math.min(source[offset+1],Math.min(source[offset+6],source[offset+11]));
+            double maxY=Math.max(source[offset+1],Math.max(source[offset+6],source[offset+11]));
+            double minZ=Math.min(source[offset+2],Math.min(source[offset+7],source[offset+12]));
+            double maxZ=Math.max(source[offset+2],Math.max(source[offset+7],source[offset+12]));
+            var candidates=cutIndex.query(new dev.realworldmc.MeshCut.Box(minX,minY,minZ,maxX,maxY,maxZ));
+            if(candidates.isEmpty()){vertices.addElements(vertices.size(),source,offset,15);continue;}
+            var triangle=new java.util.ArrayList<dev.realworldmc.MeshCut.Vertex>(3);
+            for(int k=0;k<3;k++){int o=offset+k*5;triangle.add(new dev.realworldmc.MeshCut.Vertex(source[o],source[o+1],source[o+2],source[o+3],source[o+4]));}
+            java.util.List<java.util.List<dev.realworldmc.MeshCut.Vertex>> polygons=java.util.List.of(triangle);
+            for(var box:candidates){
+                var remaining=new java.util.ArrayList<java.util.List<dev.realworldmc.MeshCut.Vertex>>();
+                for(var polygon:polygons)remaining.addAll(dev.realworldmc.MeshCut.subtract(polygon,box));
+                polygons=remaining;if(polygons.isEmpty())break;
+            }
+            for(var polygon:polygons)for(int t=1;t<polygon.size()-1;t++)for(var vertex:java.util.List.of(polygon.getFirst(),polygon.get(t),polygon.get(t+1))) {
+                vertices.add((float)vertex.x());vertices.add((float)vertex.y());vertices.add((float)vertex.z());vertices.add((float)vertex.u());vertices.add((float)vertex.v());
+            }
+        }
+        int length=vertices==null?source.length:vertices.size();
+        float[] draw=vertices==null?source:vertices.elements();
+        empty[i]=length==0;if(empty[i])return;
+        try(ByteBufferBuilder bytes=new ByteBufferBuilder(length/5*DefaultVertexFormat.POSITION_TEX.getVertexSize())) {
+            BufferBuilder bb=new BufferBuilder(bytes,VertexFormat.Mode.TRIANGLES,DefaultVertexFormat.POSITION_TEX);
+            for(int o=0;o<length;o+=5)bb.addVertex(draw[o],draw[o+1],draw[o+2]).setUv(draw[o+3],draw[o+4]);
+            try(MeshData mesh=bb.buildOrThrow()){buffers[i].bind();buffers[i].upload(mesh);VertexBuffer.unbind();}
+        }
+    }
 
 	public int partCount() {
 		return buffers.length;

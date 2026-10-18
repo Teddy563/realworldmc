@@ -2,6 +2,6 @@
   "required": true,
   "package": "dev.realworldmc.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["StreetEditsMixin", "FlightRocketItemMixin", "FlightRocketMixin"],
+  "mixins": ["StreetEditsMixin", "StreetWalkMixin", "StreetWalkPlayerMixin", "FlightRocketItemMixin", "FlightRocketMixin"],
   "injectors": { "defaultRequire": 1 }
 }

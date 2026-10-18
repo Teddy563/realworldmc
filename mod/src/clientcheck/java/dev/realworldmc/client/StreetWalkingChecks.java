@@ -111,11 +111,17 @@ final class StreetWalkingChecks {
                 require(!dev.realworldmc.client.map.OsmTileCache.active(net.minecraft.world.level.Level.OVERWORLD),"Other Xaero dimensions remain isolated");
                 EarthConfig.get().osmMap=false;
                 anchorX=PanoramaRenderer.INSTANCE.cameraAnchor().x;anchorZ=PanoramaRenderer.INSTANCE.cameraAnchor().z;
-                require(photographs.get()==1,"One initial photograph");move(mc,.5,0);stage=2;return;
+                require(photographs.get()==1,"One initial photograph");move(mc,1.49,0);stage=2;return;
+            }
+            if(stage==10 && Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)>5) {
+                var fade=PanoramaRenderer.class.getDeclaredField("fadingSphere");fade.setAccessible(true);
+                require(fade.get(PanoramaRenderer.INSTANCE)!=null,"Fixed-center travel crossfades the previous photo");
+                require(Math.abs(mc.player.getY()-PanoramaRenderer.INSTANCE.groundY())<.01,"Fixed-center avatar remains grounded");
+                stage=11;ticks=0;
             }
             if(++ticks<30)return;
             if(stage==2) {
-                require(Math.abs(mc.player.getX()-anchorX-.5)<.1,"Free movement is not pinned");
+                require(Math.abs(mc.player.getX()-anchorX-1.49)<.1,"Free movement is not pinned");
                 require(photographs.get()==1,"No requests before the early preparation threshold");
                 server(mc,p->{
                     var start=p.position();var wall=p.blockPosition().east();
@@ -124,13 +130,13 @@ final class StreetWalkingChecks {
                     p.move(net.minecraft.world.entity.MoverType.SELF,new net.minecraft.world.phys.Vec3(1,1,0));
                     require(Math.abs(p.getX()-start.x-1)<.01 && Math.abs(p.getY()-start.y)<.01,"Walking crosses blocks without vertical drift");
                     p.setPos(start);
-                });move(mc,1.2,0);stage=3;return;
+                });move(mc,1.6,0);stage=3;return;
             }
             if(stage==3) {
                 if(photographs.get()<2)return;
                 try(var screenshot=net.minecraft.client.Screenshot.takeScreenshot(mc.getMainRenderTarget())){screenshot.writeToFile(Path.of("street-hud-check.png"));}
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Prepared destination does not move the photograph early");
-                move(mc,1.6,0);stage=4;return;
+                move(mc,1.9,0);stage=4;return;
             }
             if(stage==4) {
                 if(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<5)return;
@@ -142,7 +148,7 @@ final class StreetWalkingChecks {
             if(stage==5) {
                 require(photographs.get()==2,"Missing south link causes no photo request");
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Missing link keeps the current stop");
-                move(mc,-1.2,0);stage=6;return;
+                move(mc,-1.6,0);stage=6;return;
             }
             if(stage==6) {
                 if(photographs.get()<3)return;
@@ -153,6 +159,15 @@ final class StreetWalkingChecks {
                 require(photographs.get()==3,"Cancelled destination does not start a retry loop");
                 require(ApiUsageHud.lines().stream().anyMatch(line->line.contains("100,000")),"Local usage HUD displays the monthly tile allowance");
                 EarthConfig.get().usageHud=false;require(ApiUsageHud.lines().isEmpty(),"Usage can be hidden while controls remain enabled");require(EarthConfig.get().actionBar,"Usage toggle leaves the HUD enabled");EarthConfig.get().usageHud=true;
+                PanoramaRenderer.INSTANCE.requestWalking(false);stage=9;ticks=0;return;
+            }
+            if(stage==9) {
+                if(PanoramaRenderer.INSTANCE.walking())return;
+                var ticket=PanoramaRenderer.class.getDeclaredField("ticket");ticket.setAccessible(true);
+                net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new PanoramaActionPayload(ticket.getInt(PanoramaRenderer.INSTANCE),"next","A"));
+                stage=10;ticks=0;return;
+            }
+            if(stage==11) {
                 mc.options.keyShift.setDown(true);EarthConfig.get().streetViewShortcut=false;
                 require(!StreetShortcut.press(org.lwjgl.glfw.GLFW.GLFW_KEY_F,0,org.lwjgl.glfw.GLFW.GLFW_PRESS),"Disabled shortcut does not consume offhand input");
                 EarthConfig.get().streetViewShortcut=true;

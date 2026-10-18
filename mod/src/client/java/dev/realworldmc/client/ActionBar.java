@@ -37,6 +37,7 @@ public final class ActionBar {
             var wrapped=mc.font.split(Component.literal(text),width-12);
             lines.addAll(wrapped.subList(0,Math.min(2,wrapped.size())));
         }
+        int statusEnd=lines.size();
         for(String control:controls)lines.addAll(mc.font.split(Component.literal(control),width-12));
         int controlsEnd=lines.size();
         for(String usage:ApiUsageHud.lines())lines.addAll(mc.font.split(Component.literal(usage),width-12));
@@ -44,12 +45,12 @@ public final class ActionBar {
         graphics.pose().pushPose();
         graphics.pose().translate(5,Math.max(5,bottom-height*scale),0);
         graphics.pose().scale(scale,scale,1);
-        graphics.fill(0,0,width,height,0x99101820);
-        graphics.fill(0,0,width,14,0xcc172c35);
-        graphics.fill(0,0,2,height,0xff5cc5b0);
-        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,0xffe8ffff,false);
+        graphics.fill(0,0,width,height,0x99101e17);
+        graphics.fill(0,0,width,14,0xcc173524);
+        graphics.fill(0,0,2,height,0xff66dd99);
+        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,0xffb5f5cb,false);
         int y=17;
-        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<controlsEnd?0xffeeeeee:0xff9ddbd2,false);y+=11;}
+        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<statusEnd?0xffa3dfb6:i<controlsEnd?0xffeeeeee:0xffa3dfb6,false);y+=11;}
         graphics.pose().popPose();
     }
     public static List<String> flightControls() {
@@ -75,6 +76,18 @@ public final class ActionBar {
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw"))) {
+                var cfg=EarthConfig.get();var mc=Minecraft.getInstance();
+                if(words[1].equals("controls") && (words.length==2 || java.util.Set.of("on","off").contains(words[2]))) {
+                    cfg.controlsHud=words.length==2?!cfg.controlsHud:words[2].equals("on");cfg.save();return false;
+                }
+                if(words[1].equals("walk") && (words.length==2 || java.util.Set.of("on","off").contains(words[2]))) {
+                    if(PanoramaRenderer.INSTANCE.active())PanoramaRenderer.INSTANCE.requestWalking(words.length==2?!PanoramaRenderer.INSTANCE.walking():words[2].equals("on"));return false;
+                }
+                if(words[1].equals("camera") && words.length==3 && java.util.Set.of("first","back","front").contains(words[2])) {
+                    mc.options.setCameraType(words[2].equals("first")?net.minecraft.client.CameraType.FIRST_PERSON:words[2].equals("back")?net.minecraft.client.CameraType.THIRD_PERSON_BACK:net.minecraft.client.CameraType.THIRD_PERSON_FRONT);return false;
+                }
+            }
             if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("usage")) {
                 if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
                 var cfg=EarthConfig.get();cfg.usageHud=words.length==2?!cfg.usageHud:words[2].equals("on");cfg.save();

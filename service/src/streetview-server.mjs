@@ -30,7 +30,7 @@ http.createServer(async (req, res) => {
   }
   if (req.method !== 'GET') { res.writeHead(405).end(); return; }
   const url = new URL(req.url, 'http://127.0.0.1:8766');
-  if(url.pathname==='/usage'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...usage.snapshot(),configured:!!tilesKey}));return;}
+  if(url.pathname==='/usage'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({...usage.snapshot(),...(native?.cache.snapshot()??{}),configured:!!tilesKey}));return;}
   if (url.pathname === '/health') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ok:true, name:'RealWorldMC Street View', instanceId:process.env.RWMC_INSTANCE_ID ?? '', hasKey:!!tilesKey})); return;

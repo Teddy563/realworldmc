@@ -53,6 +53,7 @@ public final class ApiUsageHud {
         lines.add("Free ~"+fmt(Math.max(0,limit-used))+" · Local/month");
         if(photo){int tiles=PanoramaRenderer.INSTANCE.tilesPerPhoto();if(tiles>0)lines.add("Next ~"+tiles+" tiles · Requests "+fmt(number(data,"requests")));}
 
+        if(photo)lines.add("Cache: "+fmt(number(data,"cachedTiles"))+" tiles · Reused "+fmt(number(data,"cacheHits")));
         return lines;
     }
 }

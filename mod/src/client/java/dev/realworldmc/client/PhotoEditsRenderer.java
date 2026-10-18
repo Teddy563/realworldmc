@@ -55,7 +55,7 @@ public final class PhotoEditsRenderer {
         originals.forEach((pos, original) -> {
             if (pos.distToCenterSqr(camera) > 96 * 96 || !loaded.test(pos)) return;
             BlockState now = stateAt.apply(pos);
-            if (now == original) return;
+            if (now == original || (!mapCuts && dev.realworldmc.StreetEdits.cosmeticSoilChange(original,now))) return;
             if (!now.isAir()) { if(!mapCuts)changed.put(pos, now); }
             else if (!original.isAir()) holes.put(pos, original);
         });

@@ -1,4 +1,5 @@
 import jpeg from 'jpeg-js';
+import {StreetTileCache} from './streetview-cache.mjs';
 // Official Street View Tiles API; never use Cesium's temporary terrain credential here.
 
 export function panoramaLayout(meta, maxWidth = 4096) {
@@ -19,7 +20,7 @@ export function copyTile(output,layout,tile,x,y) {
 export class NativeStreetView {
   constructor(key, fetchImpl = fetch, {maxWidth = 2048, usage = null} = {}) {
     if (![1024,2048,4096].includes(maxWidth)) throw new Error("Photo width must be 1024, 2048 or 4096.");
-    this.usage=usage; this.key = key; this.fetch = fetchImpl; this.expiry = 0; this.maxWidth=maxWidth; this.retryAfter=0;
+    this.cache=new StreetTileCache();this.usage=usage; this.key = key; this.fetch = fetchImpl; this.expiry = 0; this.maxWidth=maxWidth; this.retryAfter=0;
   }
   async session() {
     if (this.token && Date.now() < this.expiry) return this.token;
@@ -36,6 +37,8 @@ export class NativeStreetView {
     return this.pending;
   }
   async request(path, params) {
+    const cacheKey=path.startsWith('tiles/')?path+':'+params.panoId:null;
+    if(cacheKey){const cached=this.cache.get(cacheKey);if(cached)return cached;}
     if(Date.now()<this.retryAfter)throw new Error("Street View provider is cooling down after a quota or service error.");
     const u = new URL('https://tile.googleapis.com/v1/streetview/'+path);
     u.searchParams.set('key',this.key); u.searchParams.set('session',await this.session());
@@ -49,6 +52,10 @@ export class NativeStreetView {
         this.retryAfter=Date.now()+Math.max(30,Math.min(86400,Number.isFinite(seconds)?seconds:30))*1000;
       }
       if(r.status===401 || r.status===403) this.expiry=0; throw Object.assign(new Error(`Street View request failed (HTTP ${r.status}). Check coverage, quota and Map Tiles API access.`),{status:r.status}); }
+    if(cacheKey){
+      const bytes=Buffer.from(await r.arrayBuffer());if(bytes.length>4_000_000)throw new Error('Tile exceeds the image limit.');
+      this.cache.put(cacheKey,bytes,r.headers);return new Response(bytes,{headers:r.headers});
+    }
     return r;
   }
   async metadata(q) {
@@ -67,7 +74,7 @@ export class NativeStreetView {
   async panorama(q) {
     const pano=q.get('pano');
     if(!/^[\w-]{1,256}$/.test(pano??''))throw new Error('Invalid panorama ID.');
-    // Coalesce simultaneous consumers, but retain no finished imagery or disk cache.
+    // Coalesce assemblies. Only fresh provider-permitted tiles remain in the private memory cache.
     if(this.assembly) {
       if(this.assembly.pano===pano)return this.assembly.promise;
       throw new Error('Another panorama is loading. Retry shortly.');

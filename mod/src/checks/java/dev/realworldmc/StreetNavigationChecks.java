@@ -34,12 +34,12 @@ public final class StreetNavigationChecks {
         var aFade=new CreditFade();var bFade=new CreditFade();aFade.color(false,0);bFade.color(false,0);
         for(int t=10;t<=120;t+=10)aFade.color(true,t);
         check(aFade.color(true,120)==bFade.color(true,120),"Fade must not depend on frame rate");
-        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},.9,0,StreetNavigation.WALK_PREPARE)==-1,"No speculative loads before directional intent");
-        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.1,0,StreetNavigation.WALK_PREPARE)==1,"East movement starts exactly one east destination");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.5,0,StreetNavigation.WALK_PREPARE)==-1,"No speculative loads before directional intent");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.6,0,StreetNavigation.WALK_PREPARE)==1,"East movement starts exactly one east destination");
         check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.4,0,StreetNavigation.WALK_TRANSITION)==-1,"Loading does not teleport before the 3 by 3 boundary");
-        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.5,0,StreetNavigation.WALK_TRANSITION)==1,"Crossing commits east destination");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},1.8,0,StreetNavigation.WALK_TRANSITION)==1,"Crossing commits east destination");
         check(StreetNavigation.walkingLink(new double[]{0},0,3.1,StreetNavigation.WALK_TRANSITION)==-1,"No forced travel when south link is missing");
-        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},-1.5,0,StreetNavigation.WALK_TRANSITION)==3,"Sideways/backward movement uses displacement, not camera yaw");
+        check(StreetNavigation.walkingLink(new double[]{0,90,180,270},-1.8,0,StreetNavigation.WALK_TRANSITION)==3,"Sideways/backward movement uses displacement, not camera yaw");
         System.out.println("25 geographic, navigation, walking and credit-fade checks passed.");
     }
 }

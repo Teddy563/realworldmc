@@ -1,5 +1,7 @@
 # Changelog
 
+- Street View: grounded photo projection, fades in both movement modes, building space inside the full 3×3 area, green controls with separate hint toggle, and bounded header-aware tile reuse with visible cache counts.
+
 ## 1.0.3 (unreleased)
 
 - Enabled geographic Xaero maps in Street View, added bounded walking parallax and photo fades, and condensed the HUD into a scoreboard panel with an independent usage toggle.

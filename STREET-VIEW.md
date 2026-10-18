@@ -2,7 +2,7 @@
 
 For Minecraft 1.21.1, import the full `.mrpack`, open `/earth setup`, and test/save the optional Google Map Tiles API key. The mod starts the map and photo services automatically. Use `/earth streetview` and `/earth back`, or Sneak + Swap Offhand (normally Shift+F) with empty hands on the ground. `/earth streetkey off` disables the shortcut.
 
-Walking prepares a connected photo one block from center, changes stops at the 3×3 boundary and waits inside a 5×5 area if needed. You arrive behind the next center without terrain blocking movement. V toggles fixed-center navigation; arrow keys travel in either mode. Nearby walking uses limited parallax and a short fade; V selects fixed-center mode. `/earth hud off` hides the optional panel; `/earth usage off` hides only counts. See [1.0.3 behavior](docs/releases/v1.0.3.md).
+Walking leaves the complete 3×3 area free for building: preparation starts at 1.55 blocks from center and travel starts at 1.8 blocks and waits inside a 5×5 area if needed. You arrive behind the next center without terrain blocking movement. V toggles fixed-center navigation; arrow keys travel in either mode. Both walking and fixed-center travel crossfade. Nearby walking uses limited parallax; the photo ground follows the real camera height in first and third person. V selects fixed-center mode. `/earth hud off` hides the optional panel; `/earth usage off` hides only counts. `/earth controls off` hides key hints, `/earth walk on|off` chooses movement, and `/earth camera first|back|front` chooses perspective. See [1.0.3 behavior](docs/releases/v1.0.3.md).
 
 See [setup](docs/setup.md), [accounts and costs](docs/accounts-and-costs.md), and [controls](docs/controls.md).
 

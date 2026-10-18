@@ -106,7 +106,7 @@ public final class PanoramaRenderer {
                     viewSettings(payload);walkingRequested=false;
                     mc.player.setNoGravity(true);mc.player.setDeltaMovement(0,0,0);
                     mc.player.setPos(anchorX,walking?groundY:anchorY,anchorZ);
-                    notice(walking?"Nearby walk: 3×3 blocks; cross the edge to travel • F5: experimental third person":"Photo viewpoint restored • V: nearby walk");
+                    notice(walking?"Walk · Leave 3×3 to travel":"Center · Arrows to travel");
                 }
             }
             case "loading" -> {generation++;discardPrepared();pendingTicket=payload.ticket();loading=true;status=payload.metadata();}
@@ -125,7 +125,7 @@ public final class PanoramaRenderer {
                     ResourceLocation nextTexture=currentTexture.equals(TEXTURE)?RealWorldMC.id("dynamic/streetview_next"):TEXTURE;
                     mc.getTextureManager().release(nextTexture);
                     DynamicTexture texture=new DynamicTexture(prepared);prepared=null;texture.setFilter(true,false);mc.getTextureManager().register(nextTexture,texture);
-                    if(sphere!=null && walking){fadingSphere=sphere;fadingTexture=currentTexture;fadeOffset=lastOffset;fadeStarted=net.minecraft.Util.getMillis();}
+                    if(sphere!=null){fadingSphere=sphere;fadingTexture=currentTexture;fadeOffset=lastOffset;fadeStarted=net.minecraft.Util.getMillis();}
                     else {if(sphere!=null)sphere.close();mc.getTextureManager().release(currentTexture);}
                     sphere=next;currentTexture=nextTexture;preparedMetadata=null;
                     copyright=text(metadata,"copyright","Google");report=text(metadata,"reportProblemLink","");
@@ -146,7 +146,7 @@ public final class PanoramaRenderer {
         walking=metadata.has("rwmcWalking") && metadata.get("rwmcWalking").getAsBoolean();
     }
     private void notice(String text){status=text;noticeUntil=net.minecraft.Util.getMillis()+6000;}
-    private void requestWalking(boolean enabled){
+    public void requestWalking(boolean enabled){
         if(loading || walkingRequested)return;
         walkingRequested=true;action(ticket,"walk",enabled?"on":"off");
     }
@@ -155,7 +155,7 @@ public final class PanoramaRenderer {
         if(r.statusCode()!=200 || r.body().length>20_000_000)throw new IllegalStateException("Street View unavailable");return r.body();
     }
     private void load(JsonObject data,int request){
-        loading=true;status="Loading high-resolution Street View…";int generationNow=++generation;
+        loading=true;status="Loading photo…";int generationNow=++generation;
         Minecraft mc=Minecraft.getInstance();
         CompletableFuture.runAsync(()->{
             NativeImage image=null;
@@ -170,7 +170,7 @@ public final class PanoramaRenderer {
                 NativeImage ready=image;image=null;
                 mc.execute(()->{
                     if(generationNow!=generation || request!=pendingTicket){ready.close();return;}
-                    discardPrepared();prepared=ready;preparedMetadata=data;status="Photo ready; preparing destination terrain…";
+                    discardPrepared();prepared=ready;preparedMetadata=data;status="Ready · Waiting for travel";
                     action(request,"ready","");
                 });
             }catch(Exception e){RealWorldMC.LOGGER.warn("Street View photo download/decode failed",e);if(image!=null)image.close();mc.execute(()->{
@@ -210,6 +210,12 @@ public final class PanoramaRenderer {
         double length=Math.hypot(delta.x,delta.z),scale=length>.001?Math.min(.2,.3/length):0;
         return new net.minecraft.world.phys.Vec3(delta.x*scale,0,delta.z*scale);
     }
+    private net.minecraft.world.phys.Vec3 mcPlayerPosition(){return Minecraft.getInstance().player.position();}
+    static net.minecraft.world.phys.Vec3 projectionOffset(net.minecraft.world.phys.Vec3 capture,net.minecraft.world.phys.Vec3 feet,net.minecraft.world.phys.Vec3 camera,boolean walking){
+        var local=walkOffset(capture.subtract(feet),walking);
+        // Keep the road at its world height, including detached third-person cameras.
+        return new net.minecraft.world.phys.Vec3(local.x+feet.x-camera.x,capture.y-camera.y,local.z+feet.z-camera.z);
+    }
     public void renderSky(WorldRenderContext ctx){
         if(!active() || sphere==null)return;
         boolean cull=GL11.glIsEnabled(GL11.GL_CULL_FACE),blend=GL11.glIsEnabled(GL11.GL_BLEND),depth=GL11.glIsEnabled(GL11.GL_DEPTH_TEST),mask=GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
@@ -218,12 +224,12 @@ public final class PanoramaRenderer {
         try {
             RenderSystem.disableCull();RenderSystem.disableBlend();RenderSystem.disableDepthTest();RenderSystem.depthMask(false);RenderSystem.setShaderColor(1,1,1,1);
             RenderSystem.setShader(GameRenderer::getPositionTexShader);RenderSystem.setShaderTexture(0,currentTexture);
-            var offset=walkOffset(cameraAnchor().subtract(ctx.camera().getPosition()),walking);
+            var offset=projectionOffset(cameraAnchor(),mcPlayerPosition(),ctx.camera().getPosition(),walking);
             lastOffset=offset;
             float fade=Math.min(1,(net.minecraft.Util.getMillis()-fadeStarted)/250f);fade=fade*fade*(3-2*fade);
             if(fadingSphere!=null && fade<1){
                 RenderSystem.setShaderTexture(0,fadingTexture);
-                fadingSphere.bind();fadingSphere.drawWithShader(new Matrix4f(ctx.positionMatrix()).setTranslation(0,0,0).translate((float)fadeOffset.x,0,(float)fadeOffset.z),ctx.projectionMatrix(),RenderSystem.getShader());
+                fadingSphere.bind();fadingSphere.drawWithShader(new Matrix4f(ctx.positionMatrix()).setTranslation(0,0,0).translate((float)fadeOffset.x,(float)fadeOffset.y,(float)fadeOffset.z),ctx.projectionMatrix(),RenderSystem.getShader());
                 RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();RenderSystem.setShaderColor(1,1,1,fade);
             } else if(fadingSphere!=null)finishFade();
             RenderSystem.setShaderTexture(0,currentTexture);
@@ -270,7 +276,7 @@ public final class PanoramaRenderer {
         // Crossing the free-walk boundary explicitly selects one connected destination.
         // Its photo loads while the player covers the remaining half-metre to the transition.
         approaching=true; cancelSent=false; walkingDestination=next; loading=true; pendingTicket=ticket;
-        status="Preparing the next photo in your walking direction…";
+        status="Loading next photo…";
         action(ticket,"approach",metadata.getAsJsonArray("links").get(next).getAsJsonObject().get("panoId").getAsString());
     }
     private boolean validReport(){try{URI u=URI.create(report);String h=u.getHost();return "https".equals(u.getScheme()) && h!=null && (h.equals("google.com")||h.endsWith(".google.com")||h.endsWith(".googleapis.com"));}catch(Exception e){return false;}}
@@ -314,7 +320,7 @@ public final class PanoramaRenderer {
         for(int i=0;i<directions.length;i++){
             double angle=Math.toRadians(directions[i]-heading),sin=Math.sin(angle),cos=Math.cos(angle);
             int ax=cx+(int)Math.round(sin*62),ay=cy-(int)Math.round(cos*25);
-            int color=loading?0x55ffffff:i==selected?0xccffdd35:0x88ffffff;
+            int color=loading?0x55ffffff:i==selected?0xcc66dd99:0x88ffffff;
             for(int y=0;y<glyph.length;y++)for(int x=0;x<glyph[y].length();x++)if(glyph[y].charAt(x)=='1'){
                 double dx=(x-3)*3,dy=(y-3)*3;int px=ax+(int)Math.round(dx*cos-dy*sin),py=ay+(int)Math.round(dx*sin+dy*cos);
                 g.fill(px+1,py+1,px+4,py+4,0x66000000);g.fill(px,py,px+3,py+3,color);
@@ -337,9 +343,9 @@ public final class PanoramaRenderer {
             for(var line:lines){g.drawString(mc.font,line,7,top,0xffeeeeee,true);top+=10;}
         }
         if(dev.realworldmc.EarthConfig.get().actionBar && !mc.options.hideGui && mc.screen==null)arrows(g);
-        if(!sourcesVisible)ActionBar.render(g,h-40,java.util.List.of(
+        if(!sourcesVisible)ActionBar.render(g,h-40,dev.realworldmc.EarthConfig.get().controlsHud ? java.util.List.of(
             walking?"WASD: Walk 3×3 · Arrows: Travel":ActionBar.key(mc.options.keyUp)+" / Arrows: Travel",
             ActionBar.key(walkKey)+(walking?": Center":": Walk")+" · "+ActionBar.key(mc.options.keyTogglePerspective)+": Camera",
-            dev.realworldmc.EarthConfig.get().streetViewShortcut?"Shift + "+ActionBar.key(mc.options.keySwapOffhand)+": Return":"/earth back: Return"));
+            dev.realworldmc.EarthConfig.get().streetViewShortcut?"Shift + "+ActionBar.key(mc.options.keySwapOffhand)+": Return":"/earth back: Return") : java.util.List.of());
     }
 }

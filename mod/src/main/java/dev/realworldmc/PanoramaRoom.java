@@ -52,7 +52,7 @@ public final class PanoramaRoom {
     private static void fail(ServerPlayer p, Session s, int ticket, String message) {
         if (SESSIONS.get(p.getUUID()) != s || s.request != ticket) return;
         s.busy = false; s.preparing = false; s.pending = null; s.approach = false; s.terrainReady = false;
-        if (!p.isRemoved()) { send(p,ticket,"error",message,0,0,0); say(p,message); }
+        if (!p.isRemoved()) { send(p,ticket,"error",message,0,0,0); if(!message.equals("Walking destination cancelled."))say(p,message); }
     }
     public static int enter(CommandSourceStack src, double lat, double lon) {
         return enter(src,lat,lon,50);
@@ -172,7 +172,7 @@ public final class PanoramaRoom {
                 saveReturn(p);
                 // Prefer street-level free space over a roof. Do not delete obstructions or repair craters.
                 s.groundY = landingY(room,x,z);
-                double y = s.groundY + s.eyeHeight - p.getEyeHeight(net.minecraft.world.entity.Pose.STANDING);
+                double y = s.groundY;
                 double entryX=s.x,entryZ=s.z;
                 var velocity=p.getDeltaMovement();
                 boolean continuing=s.walking && s.approach && s.current!=null;
@@ -236,7 +236,7 @@ public final class PanoramaRoom {
         }
         if (!Double.isFinite(height) || height < 1 || height > 4) return 0;
         s.eyeHeight = height;
-        s.anchorY = s.groundY + height - p.getEyeHeight(net.minecraft.world.entity.Pose.STANDING);
+        s.anchorY = s.groundY;
         if (!s.walking) { p.teleportTo(s.anchorX,s.anchorY,s.anchorZ);p.setDeltaMovement(0,0,0);p.fallDistance=0; }
         send(p,s.ticket,"anchor",viewMetadata(s).toString(),s.anchorX,s.anchorY,s.anchorZ);
         say(p,String.format(Locale.ROOT,"Photo camera height: %.2f m. Block size remains 1 metre. This height follows you between photo stops until /earth back.",height));

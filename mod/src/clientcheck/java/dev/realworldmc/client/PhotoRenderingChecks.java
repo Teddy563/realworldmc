@@ -50,6 +50,15 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
         require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(100,0,100),true).length()<=.301,"Waiting and third person cannot stretch the photo without bounds");
         require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,0,0),false).length()==0,"Fixed mode stays centered");
         var orientation=new org.joml.Matrix3f();
+        var capture=new net.minecraft.world.phys.Vec3(0,66.5,0);
+        var feet=new net.minecraft.world.phys.Vec3(0,64,0);
+        for(var camera:java.util.List.of(new net.minecraft.world.phys.Vec3(0,65.62,0),new net.minecraft.world.phys.Vec3(0,67,2.5),new net.minecraft.world.phys.Vec3(0,63,-2.5))) {
+            var projected=PanoramaRenderer.projectionOffset(capture,feet,camera,true);
+            require(Math.abs(camera.y+projected.y-2.5-feet.y)<.0001,"Photo ground meets the feet in first and third person");
+            require(Math.abs(camera.z+projected.z)<.0001,"Detached camera does not carry the floor with it");
+        }
+        require(dev.realworldmc.StreetEdits.cosmeticSoilChange(net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(),net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()),"Grass decay is not a floating player build");
+        require(!dev.realworldmc.StreetEdits.cosmeticSoilChange(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState()),"Placed grass blocks remain visible");
         var ground=PanoramaRenderer.photoPoint(orientation,2.5f,.5f,.75f);
         require(Math.abs(ground.y+2.5)<.0001 && Math.abs(ground.z+2.5)<.0001,"Photo ground must intersect a fixed 2.5 metre capture plane");
         var lower=PanoramaRenderer.photoPoint(orientation,1.5f,.5f,.75f);

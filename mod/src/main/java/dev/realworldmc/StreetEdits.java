@@ -23,8 +23,11 @@ public final class StreetEdits {
     public static Storage storage(ServerLevel level){
         return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(Storage::new,Storage::load,null),"realworldmc_street_edits");
     }
+    public static boolean cosmeticSoilChange(BlockState before,BlockState after){
+        return (before.is(Blocks.GRASS_BLOCK)||before.is(Blocks.DIRT)) && (after.is(Blocks.GRASS_BLOCK)||after.is(Blocks.DIRT));
+    }
     public static void changed(ServerLevel level,BlockPos pos,BlockState before,BlockState after){
-        if(!level.dimension().equals(PanoramaRoom.ROOM) || before==after)return;
+        if(!level.dimension().equals(PanoramaRoom.ROOM) || before==after || cosmeticSoilChange(before,after))return;
         Storage data=storage(level);
         data.record(pos,before);
         var edit=new StreetEditsPayload.Edit(pos.asLong(),Block.getId(data.original.get(pos.asLong())));

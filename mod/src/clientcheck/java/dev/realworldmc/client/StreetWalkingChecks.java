@@ -13,7 +13,7 @@ final class StreetWalkingChecks {
     private com.sun.net.httpserver.HttpServer fixture;
     private final AtomicInteger photographs = new AtomicInteger();
     private int stage, ticks, total;
-    private boolean opened, mapChecked;
+    private boolean opened, mapChecked, returnFailureChecked, exitCameraSeen;
     private volatile net.minecraft.core.BlockPos damagePosition;
     private double anchorX, anchorZ;
     private volatile Throwable serverFailure;
@@ -39,6 +39,7 @@ final class StreetWalkingChecks {
                 boolean east=query!=null && query.contains("pano=B");
                 body=("{\"panoId\":\""+(east?"B":"A")+"\",\"lat\":0,\"lng\":"+(east?"0.0001":"0")+",\"heading\":0,\"tilt\":90,\"roll\":0,\"copyright\":\"Synthetic test photograph\",\"links\":[{\"panoId\":\""+(east?"A":"B")+"\",\"heading\":"+(east?270:90)+"}]}").getBytes(java.nio.charset.StandardCharsets.UTF_8);
             } else if(path.equals("/usage")) body="{\"available\":true,\"configured\":true,\"directGoogle\":true,\"requests\":24,\"tiles\":16,\"roots\":1,\"freeStreetTiles\":100000,\"free3dRoots\":1000}".getBytes();
+            else if(path.equals("/ground") && query!=null && query.contains("lat=1.00000000")){status=503;body="{}".getBytes();}
             else if(path.equals("/ground")) body="{\"height\":0}".getBytes();
             else if(path.equals("/render/select")) body="{\"tiles\":[],\"attribution\":[]}".getBytes();
             else {status=404;body="{\"code\":\"NO_TERRAIN_COVERAGE\"}".getBytes();}
@@ -96,7 +97,7 @@ final class StreetWalkingChecks {
                 stage=-1;return;
             }
             if(stage==0) {
-                mc.setScreen(null);server(mc,p->{p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);PanoramaRoom.enter(p.createCommandSourceStack(),0,0);});stage=1;ticks=0;return;
+                mc.setScreen(null);server(mc,p->{p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);if(EarthRegions.all().isEmpty())EarthRegions.add(0,0,0);PanoramaRoom.enter(p.createCommandSourceStack(),0,0);});stage=1;ticks=0;return;
             }
             if(stage==1) {
                 if(!PanoramaRenderer.INSTANCE.active())return;
@@ -118,6 +119,9 @@ final class StreetWalkingChecks {
                 require(fade.get(PanoramaRenderer.INSTANCE)!=null,"Fixed-center travel crossfades the previous photo");
                 require(Math.abs(mc.player.getY()-PanoramaRenderer.INSTANCE.groundY())<.01,"Fixed-center avatar remains grounded");
                 stage=11;ticks=0;
+            }
+            if(stage==8 && StreetExitTransition.active()) {
+                exitCameraSeen=true;require(mc.options.getCameraType()==net.minecraft.client.CameraType.THIRD_PERSON_BACK,"Exit uses the existing avatar in third person");
             }
             if(++ticks<30)return;
             if(stage==2) {
@@ -167,7 +171,14 @@ final class StreetWalkingChecks {
                 net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new PanoramaActionPayload(ticket.getInt(PanoramaRenderer.INSTANCE),"next","A"));
                 stage=10;ticks=0;return;
             }
+            if(stage==12) {
+                if(StreetExitTransition.active())return;
+                require(PanoramaRenderer.INSTANCE.active(),"Failed Earth terrain preparation keeps the current photograph");
+                require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x)<.1 || Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-50000)<.1,"Failed return retains the current place");
+                returnFailureChecked=true;stage=11;ticks=0;return;
+            }
             if(stage==11) {
+                if(!returnFailureChecked){server(mc,p->StreetEarthReturn.start(p,1,1));stage=12;ticks=0;return;}
                 mc.options.keyShift.setDown(true);EarthConfig.get().streetViewShortcut=false;
                 require(!StreetShortcut.press(org.lwjgl.glfw.GLFW.GLFW_KEY_F,0,org.lwjgl.glfw.GLFW.GLFW_PRESS),"Disabled shortcut does not consume offhand input");
                 EarthConfig.get().streetViewShortcut=true;
@@ -175,6 +186,10 @@ final class StreetWalkingChecks {
                 mc.options.keyShift.setDown(false);stage=8;ticks=0;return;
             }
             if(stage==8) {
+                if(PanoramaRenderer.INSTANCE.active() || StreetExitTransition.active())return;
+                require(Math.abs(mc.player.getX())<.1 && Math.abs(mc.player.getZ())<.1,"Back reaches the current photo coordinates in Earth, not the saved entry position");
+                require(exitCameraSeen,"Geographic return ran its camera transition");
+                require(mc.options.getCameraType()==net.minecraft.client.CameraType.FIRST_PERSON,"Return restores the chosen camera perspective");
                 require(!PanoramaRenderer.INSTANCE.active(),"Back clears the Street View session");
                 require(!mc.player.noPhysics && !mc.player.isNoGravity(),"Return restores normal physics");
                 require(mc.level.dimension().equals(net.minecraft.world.level.Level.OVERWORLD),"Back restores original dimension");

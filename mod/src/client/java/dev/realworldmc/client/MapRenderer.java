@@ -458,6 +458,7 @@ public final class MapRenderer {
 		});
 	}
 
+    public boolean readyAt(double x,double z){return current!=null && current.index()==EarthRegions.indexAt(x,z) && !displayed.isEmpty();}
 	public int displayedCount() {
 		return displayed.size();
 	}

@@ -47,8 +47,21 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
     private static void check(Minecraft mc) throws Exception {
         var offset=PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,2,0),true);
         require(offset.x>0 && offset.y==0,"Walking gives horizontal feedback without camera-height distortion");
-        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(100,0,100),true).length()<=.301,"Waiting and third person cannot stretch the photo without bounds");
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(100,0,100),true).length()<=.451,"Waiting and third person cannot stretch the photo without bounds");
         require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,0,0),false).length()==0,"Fixed mode stays centered");
+        var subject=new net.minecraft.world.entity.decoration.ArmorStand(null,0,64,0);
+        double last=0;
+        for(int tick=1;tick<=25;tick++) {
+            subject.xo=(tick-1)*.1;subject.yo=64;subject.zo=0;subject.setPos(tick*.1,64,0);
+            for(int frame=0;frame<=10;frame++) {
+                float partial=frame/10f;var feetAtFrame=PanoramaRenderer.renderFeet(subject,partial);
+                double expected=(tick-1)*.1+partial*.1;
+                require(Math.abs(feetAtFrame.x-expected)<.00001,"Photo uses the same interpolated position as the camera");
+                var value=PanoramaRenderer.projectionOffset(new net.minecraft.world.phys.Vec3(0,66.5,0),feetAtFrame,feetAtFrame.add(0,1.62,0),true);
+                require(value.x<=last+.00001 && last-value.x<.004,"Continuous walking has no tick jumps or correction reversal");last=value.x;
+            }
+        }
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(2,0,0),true).x>PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1.5,0,0),true).x,"Parallax eases beyond the walking edge without a hard plateau");
         var orientation=new org.joml.Matrix3f();
         var capture=new net.minecraft.world.phys.Vec3(0,66.5,0);
         var feet=new net.minecraft.world.phys.Vec3(0,64,0);

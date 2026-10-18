@@ -60,6 +60,7 @@ public final class PanoramaRoom {
     public static int enter(CommandSourceStack src, double lat, double lon,int radius) {
         ServerPlayer p = src.getPlayer();
         if (p == null || !ServerPlayNetworking.canSend(p,PanoramaPayload.TYPE)) { src.sendFailure(RWMessages.message("Street View requires the updated RealWorldMC client.")); return 0; }
+        if(StreetEarthReturn.active(p)){say(p,"Earth return is already preparing. /earth back original returns to the entry point.");return 0;}
         if (p.server.getLevel(ROOM) == null) { src.sendFailure(RWMessages.message("Street world missing. Restart Minecraft to load the new dimension.")); return 0; }
         if (!StreetNavigation.coordinates(lat,lon) || radius<1 || radius>1000) return 0;
         Session s = SESSIONS.get(p.getUUID());
@@ -72,7 +73,7 @@ public final class PanoramaRoom {
         return 1;
     }
     public static void action(ServerPlayer p, PanoramaActionPayload action) {
-        Session s = SESSIONS.get(p.getUUID()); if (s == null) return;
+        Session s = SESSIONS.get(p.getUUID()); if (s == null || StreetEarthReturn.active(p)) return;
         if (action.action().equals("cancel") && s.approach && s.busy && action.ticket() == s.request) {
             fail(p,s,s.request,"Walking destination cancelled."); return;
         }
@@ -260,8 +261,30 @@ public final class PanoramaRoom {
             say(p,"Previous flat sandbox. Existing builds are preserved. /earth back returns."); return 1;
         } catch (Exception e) { src.sendFailure(RWMessages.message("Could not enter the previous sandbox.")); return 0; }
     }
-    public static int exit(CommandSourceStack src) { if (src.getPlayer()!=null) restore(src.getPlayer()); return 1; }
+    public static int exit(CommandSourceStack src) {
+        var p=src.getPlayer();if(p==null)return 0;
+        var s=SESSIONS.get(p.getUUID());
+        if(s==null || s.current==null || !p.level().dimension().equals(ROOM)){restore(p);return 1;}
+        if(StreetEarthReturn.active(p))return 1;
+        if(RealWorldMC.generator(p.server)==null && EarthRegions.all().isEmpty()){restore(p);return 1;}
+        var location=RealWorldMC.currentCoordinates(src);
+        if(location==null){src.sendFailure(RWMessages.message("Current Earth coordinates unavailable. Use /earth back original."));return 0;}
+        // Invalidate any in-flight walking destination; return from where the player is now.
+        s.request=++nextTicket;s.busy=false;s.pending=null;s.approach=false;s.preparing=false;s.terrainReady=false;
+        StreetEarthReturn.start(p,location[0],location[1]);return 1;
+    }
+    public static boolean finishEarthReturn(ServerPlayer p,net.minecraft.world.phys.Vec3 destination){
+        try {
+            ReturnPoint saved=GSON.fromJson(Files.readString(file(p)),ReturnPoint.class);
+            p.teleportTo(p.server.overworld(),destination.x,destination.y,destination.z,p.getYRot(),0);
+            p.noPhysics=p.isSpectator();p.setNoGravity(saved.noGravity);p.setInvulnerable(saved.invulnerable);
+            p.getAbilities().flying=saved.flying && p.getAbilities().mayfly;p.onUpdateAbilities();p.setDeltaMovement(0,0,0);p.fallDistance=0;
+            SESSIONS.remove(p.getUUID());send(p,++nextTicket,"clear","",0,0,0);
+            p.server.getPlayerList().saveAll();Files.delete(file(p));return true;
+        }catch(Exception e){say(p,"Could not complete Earth return; saved return point retained. Use /earth back original if needed.");return false;}
+    }
     public static void restore(ServerPlayer p) {
+        StreetEarthReturn.cancel(p);if(ServerPlayNetworking.canSend(p,PanoramaPayload.TYPE))send(p,0,"depart-cancel","",0,0,0);
         SESSIONS.remove(p.getUUID());
         if (ServerPlayNetworking.canSend(p,PanoramaPayload.TYPE)) send(p,++nextTicket,"clear","",0,0,0);
         try {
@@ -269,13 +292,15 @@ public final class PanoramaRoom {
             ReturnPoint r = GSON.fromJson(Files.readString(file(p)),ReturnPoint.class);
             var level = p.server.getLevel(ResourceKey.create(Registries.DIMENSION,ResourceLocation.parse(r.dimension)));
             if (level==null) { say(p,"Return dimension unavailable. Recovery file retained."); return; }
-            p.teleportTo(level,r.x,r.y,r.z,r.yaw,r.pitch); p.setInvulnerable(r.invulnerable); p.setNoGravity(r.noGravity); p.setDeltaMovement(0,0,0); p.fallDistance=0;
+            p.teleportTo(level,r.x,r.y,r.z,r.yaw,r.pitch); p.noPhysics=p.isSpectator();p.setInvulnerable(r.invulnerable); p.setNoGravity(r.noGravity); p.setDeltaMovement(0,0,0); p.fallDistance=0;
             p.getAbilities().flying=r.flying && p.getAbilities().mayfly;p.onUpdateAbilities();
             p.server.getPlayerList().saveAll(); Files.delete(file(p));
         } catch (Exception e) { say(p,"Could not restore your return point. Use /earth back to retry."); }
     }
     public static void tick(net.minecraft.server.MinecraftServer server) {
+        StreetEarthReturn.tick(server);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if(StreetEarthReturn.active(p))continue;
             Session s = SESSIONS.get(p.getUUID());
             if(s!=null && s.current!=null && p.isAlive() && p.level().dimension().equals(ROOM)){
                 p.stopRiding();p.stopFallFlying();p.setNoGravity(true);p.fallDistance=0;
@@ -309,6 +334,6 @@ public final class PanoramaRoom {
             if (p.distanceToSqr(item)<=9 && p.hasLineOfSight(item)) item.playerTouch(p);
         }
     }
-    public static void clear() { SESSIONS.clear(); PanoramaPlaces.clear(); }
-    public static void disconnected(ServerPlayer p) { SESSIONS.remove(p.getUUID()); }
+    public static void clear() { StreetEarthReturn.clear(); SESSIONS.clear(); PanoramaPlaces.clear(); }
+    public static void disconnected(ServerPlayer p) { StreetEarthReturn.cancel(p); SESSIONS.remove(p.getUUID()); }
 }

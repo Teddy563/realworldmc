@@ -96,7 +96,7 @@ public class RealWorldMC implements ModInitializer {
                     ctx.getSource().sendSuccess(() -> RWMessages.message("Open RealWorldMC setup on your Minecraft title screen. The updated client opens it with /earth setup. Do not enter keys in chat."), false);
                     return 1;
                 }))
-                .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
+                .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))
                 .then(Commands.literal("moon").executes(ctx -> spaceHelp(ctx.getSource())))
                 .then(Commands.literal("mars").executes(ctx -> spaceHelp(ctx.getSource())))
                 .then(Commands.literal("earth").executes(ctx -> spaceHelp(ctx.getSource())))
@@ -115,7 +115,7 @@ public class RealWorldMC implements ModInitializer {
                     .then(Commands.argument("coordinates", StringArgumentType.greedyString())
                         .executes(ctx -> streetView(ctx.getSource(), StringArgumentType.getString(ctx, "coordinates"))))
                     .then(Commands.literal("exit").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
-                    .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())))
+                    .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))
                     .then(Commands.literal("legacy").executes(ctx -> PanoramaRoom.legacy(ctx.getSource())))
                     .then(Commands.literal("height").then(Commands.argument("metres", DoubleArgumentType.doubleArg(1,4))
                         .executes(ctx -> PanoramaRoom.cameraHeight(ctx.getSource(),DoubleArgumentType.getDouble(ctx,"metres")))))
@@ -190,7 +190,7 @@ public class RealWorldMC implements ModInitializer {
             .append(RWMessages.helpLine("/earth streetkey on|off", "Toggle Sneak + Swap Offhand shortcut (empty hands)"))
             .append(RWMessages.helpLine("/earth streetview", "Nearest photo within 500 metres"))
             .append(RWMessages.helpLine("/earth streetview <lat, lon>", "Photo at chosen coordinates"))
-            .append(RWMessages.helpLine("/earth back", "Return from Street View"))
+            .append(RWMessages.helpLine("/earth back", "Earth view at your current Street View location"))
             .append(RWMessages.helpLine("/earth help more", "Camera height, browser and world settings"))
             .append(RWMessages.text("\n  F5: camera · Arrows / W: photo travel · V: nearby walk\n  F7: credits · F8: report photo · /rw works as an alias."));
         src.sendSuccess(() -> help, false);

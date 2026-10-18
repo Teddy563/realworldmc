@@ -94,6 +94,9 @@ public final class PanoramaRenderer {
     public void receive(PanoramaPayload payload){
         Minecraft mc=Minecraft.getInstance();
         switch(payload.phase()){
+            case "depart" -> {generation++;discardPrepared();loading=false;approaching=false;walkingRequested=false;StreetExitTransition.begin();}
+            case "arrive" -> StreetExitTransition.arrive();
+            case "depart-cancel" -> StreetExitTransition.clear();
             case "clear" -> clear();
             case "anchor" -> {
                 if (session && payload.ticket()==ticket) {
@@ -147,7 +150,7 @@ public final class PanoramaRenderer {
     }
     private void notice(String text){status=text;noticeUntil=net.minecraft.Util.getMillis()+6000;}
     public void requestWalking(boolean enabled){
-        if(loading || walkingRequested)return;
+        if(loading || walkingRequested || StreetExitTransition.active())return;
         walkingRequested=true;action(ticket,"walk",enabled?"on":"off");
     }
     private static byte[] fetch(String path) throws Exception {
@@ -207,10 +210,10 @@ public final class PanoramaRenderer {
     static net.minecraft.world.phys.Vec3 walkOffset(net.minecraft.world.phys.Vec3 delta,boolean walking){
         if(!walking)return net.minecraft.world.phys.Vec3.ZERO;
         // Limited parallax gives movement feedback without the large flat-floor stretch.
-        double length=Math.hypot(delta.x,delta.z),scale=length>.001?Math.min(.2,.3/length):0;
+        double length=Math.hypot(delta.x,delta.z),scale=length>0?.45*Math.tanh(length/1.5)/length:.3;
         return new net.minecraft.world.phys.Vec3(delta.x*scale,0,delta.z*scale);
     }
-    private net.minecraft.world.phys.Vec3 mcPlayerPosition(){return Minecraft.getInstance().player.position();}
+    static net.minecraft.world.phys.Vec3 renderFeet(net.minecraft.world.entity.Entity player,float partial){return player.getPosition(partial);}
     static net.minecraft.world.phys.Vec3 projectionOffset(net.minecraft.world.phys.Vec3 capture,net.minecraft.world.phys.Vec3 feet,net.minecraft.world.phys.Vec3 camera,boolean walking){
         var local=walkOffset(capture.subtract(feet),walking);
         // Keep the road at its world height, including detached third-person cameras.
@@ -224,7 +227,7 @@ public final class PanoramaRenderer {
         try {
             RenderSystem.disableCull();RenderSystem.disableBlend();RenderSystem.disableDepthTest();RenderSystem.depthMask(false);RenderSystem.setShaderColor(1,1,1,1);
             RenderSystem.setShader(GameRenderer::getPositionTexShader);RenderSystem.setShaderTexture(0,currentTexture);
-            var offset=projectionOffset(cameraAnchor(),mcPlayerPosition(),ctx.camera().getPosition(),walking);
+            var offset=projectionOffset(cameraAnchor(),renderFeet(Minecraft.getInstance().player,ctx.tickCounter().getGameTimeDeltaPartialTick(false)),ctx.camera().getPosition(),walking);
             lastOffset=offset;
             float fade=Math.min(1,(net.minecraft.Util.getMillis()-fadeStarted)/250f);fade=fade*fade*(3-2*fade);
             if(fadingSphere!=null && fade<1){
@@ -285,6 +288,7 @@ public final class PanoramaRenderer {
         if (mc.player != null && (loading || net.minecraft.Util.getMillis() < noticeUntil))
             mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
         if(session && !active()){clear();return;}
+        if(StreetExitTransition.active())return;
         if(active() && mc.player!=null){
             mc.player.setNoGravity(true);mc.player.fallDistance=0;
             mc.player.getAbilities().flying=false;

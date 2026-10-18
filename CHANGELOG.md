@@ -1,5 +1,7 @@
 # Changelog
 
+- Smooth Street View walking at render-frame timing with gradual parallax limits; return to Earth at the current photo location with an upward camera transition and original-entry recovery command.
+
 - Street View: grounded photo projection, fades in both movement modes, building space inside the full 3×3 area, green controls with separate hint toggle, and bounded header-aware tile reuse with visible cache counts.
 
 ## 1.0.3 (unreleased)

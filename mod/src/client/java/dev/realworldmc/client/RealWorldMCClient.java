@@ -36,10 +36,12 @@ public class RealWorldMCClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry.registerCloudRenderer(dev.realworldmc.PanoramaRoom.ROOM,context -> {});
         net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry.registerWeatherRenderer(dev.realworldmc.PanoramaRoom.ROOM,context -> {});
         ClientTickEvents.END_CLIENT_TICK.register(panorama::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(StreetExitTransition::tick);
         ClientTickEvents.END_CLIENT_TICK.register(DistantHorizonsCompat::update);
         WorldRenderEvents.START.register(context -> DistantHorizonsCompat.update(Minecraft.getInstance()));
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> onClientThread(client, () -> {panorama.clear();DistantHorizonsCompat.release();}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,client) -> onClientThread(client, () -> {panorama.clear();StreetExitTransition.clear();DistantHorizonsCompat.release();}));
         HudRenderCallback.EVENT.register((graphics,delta) -> panorama.hud(graphics));
+        HudRenderCallback.EVENT.register((graphics,delta) -> StreetExitTransition.hud(graphics));
 		ClientPlayNetworking.registerGlobalReceiver(RegionsPayload.TYPE, (payload, context) -> context.client().execute(() -> renderer.setRegions(payload)));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onClientThread(client, () -> { renderer.clear(); MapDamage.clear(); dev.realworldmc.client.map.OsmTileCache.clear(); }));
 		ClientTickEvents.END_CLIENT_TICK.register(renderer::tick);

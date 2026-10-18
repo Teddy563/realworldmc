@@ -34,8 +34,9 @@ public final class OsmTileCache {
 
     public static boolean active(ResourceKey<Level> mapDimension) {
         var level = Minecraft.getInstance().level;
-        return EarthConfig.get().osmMap && level != null && Level.OVERWORLD.equals(level.dimension())
-                && Level.OVERWORLD.equals(mapDimension) && SpaceFlight.body() == CelestialBody.EARTH;
+        return EarthConfig.get().osmMap && level != null && level.dimension().equals(mapDimension)
+                && ((Level.OVERWORLD.equals(mapDimension) && SpaceFlight.body() == CelestialBody.EARTH)
+                    || (dev.realworldmc.PanoramaRoom.ROOM.equals(mapDimension) && dev.realworldmc.client.PanoramaRenderer.INSTANCE.mapRegion()!=null));
     }
 
     public static void tick(Minecraft client) {

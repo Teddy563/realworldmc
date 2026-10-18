@@ -101,6 +101,15 @@ final class StreetWalkingChecks {
             if(stage==1) {
                 if(!PanoramaRenderer.INSTANCE.active())return;
                 require(PanoramaRenderer.INSTANCE.walking(),"Street View starts in walking mode");
+                var region=PanoramaRenderer.INSTANCE.mapRegion();require(region!=null,"Street View sends its own geographic map anchor");
+                var projected=dev.realworldmc.client.map.MapProjection.regionAt(mc.player.getX(),mc.player.getZ());
+                require(region.equals(projected),"Street View uses photo places, not Overworld places");
+                var coords=dev.realworldmc.client.map.MapProjection.latLon(projected,PanoramaRenderer.INSTANCE.cameraAnchor().x,PanoramaRenderer.INSTANCE.cameraAnchor().z);
+                require(Math.abs(coords[0])<.00001 && Math.abs(coords[1])<.00001,"Map pin matches the Street View coordinate");
+                EarthConfig.get().osmMap=true;
+                require(dev.realworldmc.client.map.OsmTileCache.active(PanoramaRoom.ROOM),"Street View map dimension enabled");
+                require(!dev.realworldmc.client.map.OsmTileCache.active(net.minecraft.world.level.Level.OVERWORLD),"Other Xaero dimensions remain isolated");
+                EarthConfig.get().osmMap=false;
                 anchorX=PanoramaRenderer.INSTANCE.cameraAnchor().x;anchorZ=PanoramaRenderer.INSTANCE.cameraAnchor().z;
                 require(photographs.get()==1,"One initial photograph");move(mc,.5,0);stage=2;return;
             }
@@ -119,6 +128,7 @@ final class StreetWalkingChecks {
             }
             if(stage==3) {
                 if(photographs.get()<2)return;
+                try(var screenshot=net.minecraft.client.Screenshot.takeScreenshot(mc.getMainRenderTarget())){screenshot.writeToFile(Path.of("street-hud-check.png"));}
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Prepared destination does not move the photograph early");
                 move(mc,1.6,0);stage=4;return;
             }
@@ -142,6 +152,7 @@ final class StreetWalkingChecks {
                 require(Math.abs(PanoramaRenderer.INSTANCE.cameraAnchor().x-anchorX)<.1,"Retreat cancels a prepared destination");
                 require(photographs.get()==3,"Cancelled destination does not start a retry loop");
                 require(ApiUsageHud.lines().stream().anyMatch(line->line.contains("100,000")),"Local usage HUD displays the monthly tile allowance");
+                EarthConfig.get().usageHud=false;require(ApiUsageHud.lines().isEmpty(),"Usage can be hidden while controls remain enabled");require(EarthConfig.get().actionBar,"Usage toggle leaves the HUD enabled");EarthConfig.get().usageHud=true;
                 mc.options.keyShift.setDown(true);EarthConfig.get().streetViewShortcut=false;
                 require(!StreetShortcut.press(org.lwjgl.glfw.GLFW.GLFW_KEY_F,0,org.lwjgl.glfw.GLFW.GLFW_PRESS),"Disabled shortcut does not consume offhand input");
                 EarthConfig.get().streetViewShortcut=true;

@@ -23,6 +23,7 @@ public class EarthConfig {
     public boolean setupComplete = false;
     /** Show RealWorldMC controls/status above map credits; vanilla and other mods are unaffected. */
     public boolean actionBar = true;
+    public boolean usageHud = true;
     /** Sneak + Swap Offhand, with empty hands, enters Street View from the ground. */
     public boolean streetViewShortcut = true;
     /** Optional Xaero overlay, independent of OSM water generation. */

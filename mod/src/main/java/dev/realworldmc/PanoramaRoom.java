@@ -202,6 +202,10 @@ public final class PanoramaRoom {
         data.addProperty("rwmcEyeHeight",s.eyeHeight);
         data.addProperty("rwmcGroundY",s.groundY);
         data.addProperty("rwmcWalking",s.walking);
+        data.addProperty("rwmcRegionIndex",s.place.index());
+        data.addProperty("rwmcRegionLat",s.place.latitude());
+        data.addProperty("rwmcRegionLon",s.place.longitude());
+        data.addProperty("rwmcRegionHeight",Double.isFinite(s.place.groundHeight())?s.place.groundHeight():0);
         return data;
     }
     private static void movement(ServerPlayer p, Session s) {

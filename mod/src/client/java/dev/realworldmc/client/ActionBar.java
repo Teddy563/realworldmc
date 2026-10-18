@@ -28,13 +28,29 @@ public final class ActionBar {
     public static void render(GuiGraphics graphics, int bottom, List<String> controls) {
         var mc=Minecraft.getInstance();
         if(!EarthConfig.get().actionBar || mc.options.hideGui || mc.screen!=null)return;
+        float scale=.8f;
+        int width=Math.min(230,(int)((graphics.guiWidth()-12)/scale));
         var lines=new ArrayList<net.minecraft.util.FormattedCharSequence>();
-        int width=Math.min(290,graphics.guiWidth()-12);
-        if(until>net.minecraft.Util.getMillis())lines.addAll(mc.font.split(status,width));
-        for(String usage:ApiUsageHud.lines())lines.addAll(mc.font.split(RWMessages.message(usage),width));
-        for(String control:controls)lines.addAll(mc.font.split(RWMessages.message(control),width));
-        int y=bottom-(lines.size()-1)*11;
-        for(var line:lines){graphics.drawString(mc.font,line,5,y,0xffffffff,true);y+=11;}
+        if(until>net.minecraft.Util.getMillis()) {
+            String text=status.getString().replaceFirst("^RW \\| ","");
+            if(text.startsWith("Street View ready"))text="Ready";
+            var wrapped=mc.font.split(Component.literal(text),width-12);
+            lines.addAll(wrapped.subList(0,Math.min(2,wrapped.size())));
+        }
+        for(String control:controls)lines.addAll(mc.font.split(Component.literal(control),width-12));
+        int controlsEnd=lines.size();
+        for(String usage:ApiUsageHud.lines())lines.addAll(mc.font.split(Component.literal(usage),width-12));
+        int height=16+lines.size()*11;
+        graphics.pose().pushPose();
+        graphics.pose().translate(5,Math.max(5,bottom-height*scale),0);
+        graphics.pose().scale(scale,scale,1);
+        graphics.fill(0,0,width,height,0x99101820);
+        graphics.fill(0,0,width,14,0xcc172c35);
+        graphics.fill(0,0,2,height,0xff5cc5b0);
+        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,0xffe8ffff,false);
+        int y=17;
+        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<controlsEnd?0xffeeeeee:0xff9ddbd2,false);y+=11;}
+        graphics.pose().popPose();
     }
     public static List<String> flightControls() {
         var mc=Minecraft.getInstance();var controls=new ArrayList<String>();
@@ -59,6 +75,11 @@ public final class ActionBar {
     public static void register() {
         ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String[] words = command.strip().split("\\s+");
+            if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("usage")) {
+                if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
+                var cfg=EarthConfig.get();cfg.usageHud=words.length==2?!cfg.usageHud:words[2].equals("on");cfg.save();
+                var mc=Minecraft.getInstance();if(mc.player!=null)mc.player.displayClientMessage(RWMessages.message("Usage panel "+(cfg.usageHud?"on":"off")+"."),false);return false;
+            }
             if(words.length>=2 && words.length<=3 && (words[0].equals("earth") || words[0].equals("rw")) && words[1].equals("streetkey")) {
                 if(words.length==3 && !java.util.Set.of("on","off").contains(words[2]))return true;
                 var cfg=EarthConfig.get();cfg.streetViewShortcut=words.length==2?!cfg.streetViewShortcut:words[2].equals("on");cfg.save();

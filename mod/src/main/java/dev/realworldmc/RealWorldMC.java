@@ -183,6 +183,7 @@ public class RealWorldMC implements ModInitializer {
             .append(RWMessages.helpLine("/earth hud", "Show or hide the bottom-left controls and status"))
             .append(RWMessages.helpLine("/earth goto <place or lat, lon>", "Travel to a real place"))
             .append(RWMessages.helpLine("/earth where", "Your coordinates and map link"))
+            .append(RWMessages.helpLine("/earth usage on|off", "Toggle usage counts independently of /earth hud"))
             .append(RWMessages.helpLine("/earth streetkey on|off", "Toggle Sneak + Swap Offhand shortcut (empty hands)"))
             .append(RWMessages.helpLine("/earth streetview", "Nearest photo within 500 metres"))
             .append(RWMessages.helpLine("/earth streetview <lat, lon>", "Photo at chosen coordinates"))

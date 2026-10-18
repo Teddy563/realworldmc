@@ -45,6 +45,10 @@ public final class PhotoRenderingChecks implements ClientModInitializer {
         });
     }
     private static void check(Minecraft mc) throws Exception {
+        var offset=PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,2,0),true);
+        require(offset.x>0 && offset.y==0,"Walking gives horizontal feedback without camera-height distortion");
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(100,0,100),true).length()<=.301,"Waiting and third person cannot stretch the photo without bounds");
+        require(PanoramaRenderer.walkOffset(new net.minecraft.world.phys.Vec3(1,0,0),false).length()==0,"Fixed mode stays centered");
         var orientation=new org.joml.Matrix3f();
         var ground=PanoramaRenderer.photoPoint(orientation,2.5f,.5f,.75f);
         require(Math.abs(ground.y+2.5)<.0001 && Math.abs(ground.z+2.5)<.0001,"Photo ground must intersect a fixed 2.5 metre capture plane");

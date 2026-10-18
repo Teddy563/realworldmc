@@ -10,6 +10,11 @@ public final class MapProjection {
     private MapProjection() { }
     public static EarthRegions.Region regionAt(double worldX, double worldZ) {
         if (!Double.isFinite(worldX) || !Double.isFinite(worldZ)) return null;
+        var level=net.minecraft.client.Minecraft.getInstance().level;
+        if(level!=null && level.dimension().equals(dev.realworldmc.PanoramaRoom.ROOM)) {
+            var street=dev.realworldmc.client.PanoramaRenderer.INSTANCE.mapRegion();
+            return street!=null && EarthRegions.indexAt(worldX,worldZ)==street.index()?street:null;
+        }
         List<EarthRegions.Region> regions = MapRenderer.INSTANCE.getRegions();
         int index = EarthRegions.indexAt(worldX, worldZ);
         if (regions == null || index < 0 || index >= regions.size()) return null;

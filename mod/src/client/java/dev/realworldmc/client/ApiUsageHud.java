@@ -30,7 +30,7 @@ public final class ApiUsageHud {
         } catch(Exception e){return null;}
     }
     public static void tick(Minecraft mc) {
-        if(mc.level==null || !EarthConfig.get().actionBar || pending || System.currentTimeMillis()<next)return;
+        if(mc.level==null || !EarthConfig.get().actionBar || !EarthConfig.get().usageHud || pending || System.currentTimeMillis()<next)return;
         if(!PanoramaRenderer.INSTANCE.active() && !MapRenderer.INSTANCE.enabled())return;
         pending=true;next=System.currentTimeMillis()+5000;int token=generation;
         CompletableFuture.supplyAsync(()->new JsonObject[]{read(ServiceClient.photoBase()),read(ServiceClient.base())})
@@ -41,17 +41,18 @@ public final class ApiUsageHud {
     private static String fmt(long value){return String.format(Locale.ROOT,"%,d",value);}
     public static List<String> lines() {
         List<String> lines=new ArrayList<>();
+        if(!EarthConfig.get().usageHud)return lines;
         boolean photo=PanoramaRenderer.INSTANCE.active();
         JsonObject data=photo?street:terrain;
-        if(!flag(data,"available")){lines.add("Google usage: local counter unavailable");return lines;}
-        if(photo && !flag(data,"configured")){lines.add("Street View: add optional key in /earth setup");return lines;}
-        if(!photo && !flag(data,"directGoogle")){lines.add("3D provider usage: check provider account");return lines;}
+        if(!flag(data,"available")){lines.add("Usage: unavailable");return lines;}
+        if(photo && !flag(data,"configured")){lines.add("Usage: key not set");return lines;}
+        if(!photo && !flag(data,"directGoogle")){lines.add("Usage: provider account");return lines;}
         long used=number(data,photo?"tiles":"roots"),limit=number(data,photo?"freeStreetTiles":"free3dRoots");
         String unit=photo?"tiles":"3D roots";
-        lines.add("Local month: "+fmt(used)+" "+unit+" · "+fmt(number(data,"requests"))+" requests");
-        lines.add("Free left ≤"+fmt(Math.max(0,limit-used))+"/"+fmt(limit)+" "+unit+"*");
-        if(photo){int tiles=PanoramaRenderer.INSTANCE.tilesPerPhoto();if(tiles>0)lines.add("Next photo ~"+tiles+" tiles · ≤"+fmt(Math.max(0,limit-used)/tiles)+" photos*");}
-        lines.add("*Local estimate; since enabled; other usage excluded");
+        lines.add((photo?"Tiles: ":"3D roots: ")+fmt(used)+" / "+fmt(limit));
+        lines.add("Free ~"+fmt(Math.max(0,limit-used))+" · Local/month");
+        if(photo){int tiles=PanoramaRenderer.INSTANCE.tilesPerPhoto();if(tiles>0)lines.add("Next ~"+tiles+" tiles · Requests "+fmt(number(data,"requests")));}
+
         return lines;
     }
 }

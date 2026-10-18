@@ -14,6 +14,7 @@ public class RealWorldMCClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
         SetupScreen.register();
+        HelpScreen.register();
         ClientTickEvents.END_CLIENT_TICK.register(dev.realworldmc.client.map.OsmTileCache::tick);
 
         CreativeFlight.register();

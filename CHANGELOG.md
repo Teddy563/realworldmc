@@ -6,6 +6,8 @@
 
 ## 1.0.3 (unreleased)
 
+- Replaced player help chat output with a green, scene-visible paged command guide. Commands fill chat without executing; Esc returns to the game.
+
 - Fixed incomplete 360 images from smaller panoramas by selecting their actual native tile zoom. Added a matching camera transition into Street View, with gray navigation arrows and a yellow selected direction.
 
 - Enabled geographic Xaero maps in Street View, added bounded walking parallax and photo fades, and condensed the HUD into a scoreboard panel with an independent usage toggle.

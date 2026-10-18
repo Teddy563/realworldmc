@@ -13,7 +13,7 @@ final class StreetWalkingChecks {
     private com.sun.net.httpserver.HttpServer fixture;
     private final AtomicInteger photographs = new AtomicInteger();
     private int stage, ticks, total;
-    private boolean opened, mapChecked, returnFailureChecked, exitCameraSeen, entryCameraSeen;
+    private boolean opened, mapChecked, returnFailureChecked, exitCameraSeen, entryCameraSeen, helpChecked;
     private volatile net.minecraft.core.BlockPos damagePosition;
     private double anchorX, anchorZ;
     private volatile Throwable serverFailure;
@@ -96,6 +96,12 @@ final class StreetWalkingChecks {
                 });
                 stage=-1;return;
             }
+            if(stage==-3){
+                if(++ticks<10)return;
+                try(var screenshot=net.minecraft.client.Screenshot.takeScreenshot(mc.getMainRenderTarget())){screenshot.writeToFile(Path.of("help-guide-check.png"));}
+                mc.setScreen(null);helpChecked=true;stage=0;
+            }
+            if(stage==0 && !helpChecked){mc.setScreen(new HelpScreen(false));stage=-3;ticks=0;return;}
             if(stage==0) {
                 mc.setScreen(null);server(mc,p->{p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);if(EarthRegions.all().isEmpty())EarthRegions.add(0,0,0);PanoramaRoom.enter(p.createCommandSourceStack(),0,0);});stage=1;ticks=0;return;
             }

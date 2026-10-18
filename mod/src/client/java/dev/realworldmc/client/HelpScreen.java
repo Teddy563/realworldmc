@@ -1,5 +1,7 @@
 package dev.realworldmc.client;
 
+import dev.realworldmc.RWTheme;
+
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.minecraft.client.gui.GuiGraphics;
@@ -70,13 +72,13 @@ public final class HelpScreen extends Screen {
         addRenderableWidget(new GuideButton(left+panelWidth-86,y,76,20,"Close",this::onClose,null));
     }
     @Override public void render(GuiGraphics g,int mouseX,int mouseY,float delta){
-        g.fill(0,0,width,height,0x55070f0b);
-        g.fill(left,top,left+panelWidth,top+panelHeight,0xe610241c);
-        g.fill(left,top,left+3,top+panelHeight,0xff65c58e);
-        g.drawString(font,"Earth guide · "+ENTRIES[page*perPage].group(),left+12,top+10,0xffa3dfb6,false);
-        g.drawString(font,"Select to fill chat · Esc to close",left+12,top+25,0xffb8c9bf,false);
+        g.fill(0,0,width,height,0x55000000);
+        g.fill(left,top,left+panelWidth,top+panelHeight,RWTheme.BACKGROUND);
+        g.fill(left,top,left+3,top+panelHeight,RWTheme.BRAND);
+        g.drawString(font,"Earth guide · "+ENTRIES[page*perPage].group(),left+12,top+10,RWTheme.GREEN,false);
+        g.drawString(font,"Select to fill chat · Esc to close",left+12,top+25,RWTheme.MUTED,false);
         String counter=(page+1)+" / "+((ENTRIES.length+perPage-1)/perPage);
-        g.drawString(font,counter,left+panelWidth-font.width(counter)-12,top+10,0xffb8c9bf,false);
+        g.drawString(font,counter,left+panelWidth-font.width(counter)-12,top+10,RWTheme.MUTED,false);
         super.render(g,mouseX,mouseY,delta);
     }
     private final class GuideButton extends Button {
@@ -85,12 +87,12 @@ public final class HelpScreen extends Screen {
             super(x,y,w,h,Component.literal(label+(entry==null?"":". "+entry.description())),b->action.run(),DEFAULT_NARRATION);this.entry=entry;
         }
         @Override protected void renderWidget(GuiGraphics g,int mouseX,int mouseY,float delta){
-            g.fill(getX(),getY(),getX()+width,getY()+height,isHoveredOrFocused()?0xff294b37:0xff183126);
-            int color=active?0xffa3dfb6:0xff718578;
-            if(entry==null){g.drawCenteredString(font,getMessage(),getX()+width/2,getY()+6,color);return;}
+            g.fill(getX(),getY(),getX()+width,getY()+height,isHoveredOrFocused()?RWTheme.HOVER:RWTheme.SURFACE);
+            int color=active?RWTheme.GREEN:RWTheme.DISABLED;
+            if(entry==null){g.drawString(font,getMessage(),getX()+(width-font.width(getMessage()))/2,getY()+6,color,false);return;}
             g.drawString(font,font.plainSubstrByWidth(entry.command(),width-12),getX()+6,getY()+4,color,false);
             var lines=font.split(Component.literal(entry.description()),width-12);
-            for(int i=0;i<Math.min(2,lines.size());i++)g.drawString(font,lines.get(i),getX()+6,getY()+17+i*10,0xffd1ddd5,false);
+            for(int i=0;i<Math.min(2,lines.size());i++)g.drawString(font,lines.get(i),getX()+6,getY()+17+i*10,RWTheme.TEXT,false);
         }
     }
 }

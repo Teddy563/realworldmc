@@ -1,5 +1,7 @@
 package dev.realworldmc.client;
 
+import dev.realworldmc.RWTheme;
+
 import dev.realworldmc.EarthConfig;
 import dev.realworldmc.RWMessages;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
@@ -45,12 +47,12 @@ public final class ActionBar {
         graphics.pose().pushPose();
         graphics.pose().translate(5,Math.max(5,bottom-height*scale),0);
         graphics.pose().scale(scale,scale,1);
-        graphics.fill(0,0,width,height,0x99101e17);
-        graphics.fill(0,0,width,14,0xcc173524);
-        graphics.fill(0,0,2,height,0xff66dd99);
-        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,0xffb5f5cb,false);
+        graphics.fill(0,0,width,height,0xcc151715);
+        graphics.fill(0,0,width,14,RWTheme.SURFACE);
+        graphics.fill(0,0,2,height,RWTheme.BRAND);
+        graphics.drawString(mc.font,PanoramaRenderer.INSTANCE.active()?"Street View":"RealWorldMC",7,3,RWTheme.GREEN,false);
         int y=17;
-        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<statusEnd?0xffa3dfb6:i<controlsEnd?0xffeeeeee:0xffa3dfb6,false);y+=11;}
+        for(int i=0;i<lines.size();i++){graphics.drawString(mc.font,lines.get(i),7,y,i<statusEnd?RWTheme.GREEN:i<controlsEnd?RWTheme.TEXT:RWTheme.GREEN,false);y+=11;}
         graphics.pose().popPose();
     }
     public static List<String> flightControls() {

@@ -6,6 +6,8 @@
 
 ## 1.0.3 (unreleased)
 
+- Matched menus, HUD accents and command prefixes to the website palette, with dark gray backgrounds and readable green text.
+
 - Replaced player help chat output with a green, scene-visible paged command guide. Commands fill chat without executing; Esc returns to the game.
 
 - Fixed incomplete 360 images from smaller panoramas by selecting their actual native tile zoom. Added a matching camera transition into Street View, with gray navigation arrows and a yellow selected direction.

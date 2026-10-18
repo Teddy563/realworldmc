@@ -7,12 +7,12 @@ import java.util.regex.Pattern;
 
 /** Shared chat/action-bar style. Provider errors must never include raw URLs or credentials. */
 public final class RWMessages {
-    public static final int GREEN = 0x55C98B;
+    public static final int GREEN = RWTheme.GREEN & 0xffffff;
     private static final Pattern COMMAND = Pattern.compile("/(?:earth|rw)(?: (?:help|setup|goto|where|back|setlocation|streetview|space|hud|fly)(?: (?:here|browser|setup|legacy|height|back|exit|on|off|return))?)?\\b");
     private RWMessages() {}
 
     public static MutableComponent prefix() {
-        return Component.literal("RW").withStyle(s -> s.withColor(GREEN).withBold(true))
+        return Component.literal("RW").withStyle(s -> s.withColor(GREEN).withBold(false))
             .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY).withStyle(s -> s.withBold(false)));
     }
 
@@ -22,7 +22,7 @@ public final class RWMessages {
         int start = 0;
         while (matcher.find()) {
             result.append(Component.literal(value.substring(start, matcher.start())));
-            result.append(Component.literal(matcher.group()).withStyle(ChatFormatting.YELLOW));
+            result.append(Component.literal(matcher.group()).withStyle(style -> style.withColor(GREEN)));
             start = matcher.end();
         }
         return result.append(Component.literal(value.substring(start)));

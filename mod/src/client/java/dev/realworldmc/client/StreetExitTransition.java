@@ -1,5 +1,7 @@
 package dev.realworldmc.client;
 
+import dev.realworldmc.RWTheme;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.GuiGraphics;
@@ -42,7 +44,7 @@ public final class StreetExitTransition {
     public static void hud(GuiGraphics g){
         if(!active)return;
         long now=net.minecraft.Util.getMillis();double alpha=reveal>0?1-ease((now-reveal)/700.0):ease((now-started-350)/350.0);
-        int a=(int)(255*alpha);if(a>0)g.fill(0,0,g.guiWidth(),g.guiHeight(),(a<<24)|0x0c1812);
-        if(alpha>.95 && reveal==0){var mc=Minecraft.getInstance();String label=entering?"Opening Street View…":"Opening Earth view…";g.drawCenteredString(mc.font,label,g.guiWidth()/2,g.guiHeight()/2,0xffa3dfb6);}
+        int a=(int)(255*alpha);if(a>0)g.fill(0,0,g.guiWidth(),g.guiHeight(),(a<<24)|0x151715);
+        if(alpha>.95 && reveal==0){var mc=Minecraft.getInstance();String label=entering?"Opening Street View…":"Opening Earth view…";g.drawCenteredString(mc.font,label,g.guiWidth()/2,g.guiHeight()/2,RWTheme.GREEN);}
     }
 }

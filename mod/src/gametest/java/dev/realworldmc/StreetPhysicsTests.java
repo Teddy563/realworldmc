@@ -27,7 +27,7 @@ public final class StreetPhysicsTests implements FabricGameTest {
         java.util.Map<String,Integer> colours=new java.util.HashMap<>();
         message.visit((style,text)->{ if(style.getColor()!=null)colours.put(text,style.getColor().getValue());return java.util.Optional.empty(); },net.minecraft.network.chat.Style.EMPTY);
         test.assertTrue(colours.get("RW")==RWMessages.GREEN && colours.get(" | ")==0x555555,"Brand prefix and separator colours");
-        test.assertTrue(colours.get("/earth setup")==0xffff55 && colours.get("/rw goto")==0xffff55 && colours.get("Try ")==0xffffff,"Commands yellow, body white");
+        test.assertTrue(colours.get("/earth setup")==RWMessages.GREEN && colours.get("/rw goto")==RWMessages.GREEN && colours.get("Try ")==0xffffff,"Commands use the brand text green, body white");
         var line=RWMessages.helpLine("/earth goto <place>","Travel");
         test.assertTrue(line.getSiblings().getFirst().getStyle().getClickEvent().getValue().equals("/earth goto "),"Help fills chat without executing a command");
         var player=test.makeMockServerPlayerInLevel();

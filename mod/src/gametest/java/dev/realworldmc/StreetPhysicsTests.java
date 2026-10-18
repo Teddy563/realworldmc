@@ -221,6 +221,14 @@ public final class StreetPhysicsTests implements FabricGameTest {
         test.assertTrue(restored.original.get(wall.asLong()).is(Blocks.STONE),"Excavations must survive placement, another break, and save/reload");
         test.assertTrue(restored.original.get(placed.asLong()).isAir(),"Removing a block placed in empty space must not tear a hole in the photo");
         test.assertTrue(restored.importedChunks.contains(42L),"Legacy comparison must not run again over changed terrain");
+        saved.remove("trackingVersion");
+        var legacy=StreetEdits.Storage.load(saved,test.getLevel().registryAccess());
+        test.assertTrue(legacy.original.isEmpty(),"Inferred legacy differences must never redraw terrain as player builds");
+        var preserved=legacy.save(new CompoundTag(),test.getLevel().registryAccess());
+        test.assertTrue(preserved.getList("unverified_legacy_edits",net.minecraft.nbt.Tag.TAG_COMPOUND).size()==2,"Ambiguous records must remain recoverable");
+        legacy.record(wall,Blocks.BRICKS.defaultBlockState());
+        var migrated=StreetEdits.Storage.load(legacy.save(new CompoundTag(),test.getLevel().registryAccess()),test.getLevel().registryAccess());
+        test.assertTrue(migrated.original.get(wall.asLong()).is(Blocks.BRICKS),"Confirmed edits after migration must persist");
         var buffer=io.netty.buffer.Unpooled.buffer();
         try{
             var payload=new StreetEditsPayload(true,java.util.List.of(new StreetEditsPayload.Edit(wall.asLong(),net.minecraft.world.level.block.Block.getId(Blocks.STONE.defaultBlockState()))));

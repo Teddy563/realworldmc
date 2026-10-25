@@ -175,8 +175,9 @@ export class EarthService {
     return out;
   }
 
-  async renderSelect(frame, cam, space = false, ahead = [0, 0]) {
-    const r = space ? spaceRenderOptions(this.cfg.render, spaceAltitude(frame, cam)) : this.cfg.render;
+  async renderSelect(frame, cam, space = false, ahead = [0, 0], overrides = {}) {
+    const baseR = space ? spaceRenderOptions(this.cfg.render, spaceAltitude(frame, cam)) : this.cfg.render;
+    const r = { ...baseR, ...overrides };
     const sseFactor = r.viewportHeight / (2 * Math.tan((r.fovDeg * Math.PI) / 360));
     const { tiles, pending } = await selectRenderTiles(this.client, frame, cam, {
       maxSse: r.maxSse, sseFactor, far: r.far, fineRadius: r.fineRadius, targetError: this.cfg.collisionError,
@@ -327,7 +328,12 @@ export function createServer(service) {
         }
         case '/render/select': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));
-          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')], q.get('space') === '1', [q.has('aheadX') ? num(q, 'aheadX') : 0, q.has('aheadZ') ? num(q, 'aheadZ') : 0]));
+          const overrides = {};
+          if (q.has('fineRadius')) overrides.fineRadius = num(q, 'fineRadius');
+          if (q.has('far')) overrides.far = num(q, 'far');
+          if (q.has('maxTiles')) overrides.maxTiles = num(q, 'maxTiles');
+          if (q.has('maxSse')) overrides.maxSse = num(q, 'maxSse');
+          return json(res, await service.renderSelect(frame, [num(q, 'x'), num(q, 'y'), num(q, 'z')], q.get('space') === '1', [q.has('aheadX') ? num(q, 'aheadX') : 0, q.has('aheadZ') ? num(q, 'aheadZ') : 0], overrides));
         }
         case '/render/tile': {
           const frame = service.frame(num(q, 'lat'), num(q, 'lon'), num(q, 'h'));

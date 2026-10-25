@@ -18,16 +18,24 @@ public abstract class PauseScreenMixin extends Screen {
     }
 
     @Inject(method = "init", at = @At("TAIL"))
-    private void realworldmc$addUpdateButton(CallbackInfo ci) {
+    private void realworldmc$addButtons(CallbackInfo ci) {
+        int btnWidth = 140;
+        int btnHeight = 20;
+        int x = width - btnWidth - 10;
+        int y = 10;
+
+        addRenderableWidget(Button.builder(
+            Component.literal("§bRealWorldMC ⚙"),
+            b -> {
+                if (minecraft != null) {
+                    minecraft.setScreen(new dev.realworldmc.client.EarthSettingsScreen(this));
+                }
+            }
+        ).bounds(x, y, btnWidth, btnHeight).build());
+
         if (UpdateChecker.hasUpdate()) {
             var release = UpdateChecker.getAvailableUpdate();
             String label = "RealWorldMC v" + release.version() + " ★";
-            // Add prominent update pill in top-right corner
-            int btnWidth = 140;
-            int btnHeight = 20;
-            int x = width - btnWidth - 10;
-            int y = 10;
-
             addRenderableWidget(Button.builder(
                 Component.literal("§a" + label),
                 b -> {
@@ -35,7 +43,7 @@ public abstract class PauseScreenMixin extends Screen {
                         minecraft.setScreen(new UpdateScreen(this, release));
                     }
                 }
-            ).bounds(x, y, btnWidth, btnHeight).build());
+            ).bounds(x, y + 24, btnWidth, btnHeight).build());
         }
     }
 }

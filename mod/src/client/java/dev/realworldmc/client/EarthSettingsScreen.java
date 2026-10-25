@@ -29,15 +29,24 @@ public final class EarthSettingsScreen extends Screen {
         initIndices();
     }
 
+    private static volatile boolean openRequested = false;
+
     public static void register() {
         net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String c = command.strip().toLowerCase(java.util.Locale.ROOT);
-            if (c.equals("earth settings") || c.equals("rw settings")) {
-                var mc = Minecraft.getInstance();
-                mc.execute(() -> mc.setScreen(new EarthSettingsScreen(mc.screen)));
+            if (c.startsWith("/")) c = c.substring(1).stripLeading();
+            if (c.matches("(?:rw|earth)\\s+settings.*")) {
+                openRequested = true;
                 return false;
             }
             return true;
+        });
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (openRequested) {
+                openRequested = false;
+                client.setScreen(new EarthSettingsScreen(client.screen));
+            }
         });
     }
 

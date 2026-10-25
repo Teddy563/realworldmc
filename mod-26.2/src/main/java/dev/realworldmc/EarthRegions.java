@@ -21,6 +21,8 @@ public final class EarthRegions {
 	public static final int GRID = 400;         // regions per row; 400 * 50k = 20M < world border
 	/** Places closer than this to an existing region center reuse that region. */
 	public static final double REUSE_RADIUS = 15_000;
+	/** Maximum block radius from region center; beyond this lies the natural buffer zone between places. */
+	public static final double MAX_REGION_RADIUS = 22_000;
 
 	public record Region(int index, double latitude, double longitude, double groundHeight) {
 		public int offsetX() {
@@ -39,10 +41,13 @@ public final class EarthRegions {
 
 	private EarthRegions() {}
 
-	/** Region whose cell contains the block position, or null. */
+	/** Region whose cell contains the block position within active radius, or null in the buffer zone. */
 	public static Region at(double x, double z) {
 		int index = indexAt(x, z);
-		return index >= 0 && index < regions.size() ? regions.get(index) : null;
+		if (index < 0 || index >= regions.size()) return null;
+		Region r = regions.get(index);
+		double dx = x - r.offsetX(), dz = z - r.offsetZ();
+		return (dx * dx + dz * dz <= MAX_REGION_RADIUS * MAX_REGION_RADIUS) ? r : null;
 	}
 
 	/** Grid cell index for a block position (-1 outside the grid). Same on client and server. */

@@ -16,5 +16,16 @@
   "key.realworldmc.photo.right": "Next photo to the right",
   "key.realworldmc.photo.report": "Report a problem with this image",
   "key.realworldmc.photo.walk": "Toggle Street View nearby walk (3x3)",
-  "key.realworldmc.photo.sources": "Show Street View sources and photo credits"
+  "key.realworldmc.photo.sources": "Show Street View sources and photo credits",
+  "gui.realworldmc.update.title": "RealWorldMC Update Available",
+  "gui.realworldmc.update.heading": "New update available for RealWorldMC!",
+  "gui.realworldmc.update.download": "Update Now",
+  "gui.realworldmc.update.ready": "Ready to install",
+  "gui.realworldmc.update.installed": "Installed (Restart needed)",
+  "gui.realworldmc.update.close": "Later",
+  "gui.realworldmc.guide.title": "Earth guide",
+  "gui.realworldmc.guide.subtitle": "Select to fill chat · Esc to close",
+  "gui.realworldmc.guide.previous": "Previous",
+  "gui.realworldmc.guide.next": "Next",
+  "gui.realworldmc.guide.close": "Close"
 }

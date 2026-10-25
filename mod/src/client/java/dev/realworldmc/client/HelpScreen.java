@@ -67,9 +67,16 @@ public final class HelpScreen extends Screen {
             addRenderableWidget(new GuideButton(left+10,y,panelWidth-20,40,entry.command(),()->minecraft.setScreen(new ChatScreen(entry.command())),entry));
         }
         int y=top+panelHeight-29;
-        var previous=addRenderableWidget(new GuideButton(left+10,y,76,20,"Previous",()->{page--;rebuildWidgets();},null));previous.active=page>0;
-        var next=addRenderableWidget(new GuideButton(left+92,y,76,20,"Next",()->{page++;rebuildWidgets();},null));next.active=end<ENTRIES.length;
-        addRenderableWidget(new GuideButton(left+panelWidth-86,y,76,20,"Close",this::onClose,null));
+        var previous=addRenderableWidget(new GuideButton(left+10,y,70,20,"Previous",()->{page--;rebuildWidgets();},null));previous.active=page>0;
+        var next=addRenderableWidget(new GuideButton(left+84,y,70,20,"Next",()->{page++;rebuildWidgets();},null));next.active=end<ENTRIES.length;
+
+        if (UpdateChecker.hasUpdate()) {
+            var updateRelease = UpdateChecker.getAvailableUpdate();
+            String updateLabel = "Update: v" + updateRelease.version();
+            addRenderableWidget(new GuideButton(left+158,y,140,20,updateLabel,()->minecraft.setScreen(new UpdateScreen(this, updateRelease)),null));
+        }
+
+        addRenderableWidget(new GuideButton(left+panelWidth-76,y,70,20,"Close",this::onClose,null));
     }
     @Override public void render(GuiGraphics g,int mouseX,int mouseY,float delta){
         g.fill(0,0,width,height,0x55000000);

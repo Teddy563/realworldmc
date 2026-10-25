@@ -18,6 +18,7 @@ import { waterFeatures } from './osm.mjs';
 import { TileClient } from './tiles.mjs';
 import { collectRegionTiles, selectRenderTiles, isFine, contentParent, contentChain } from './select.mjs';
 import { voxelizeArea, mcPositions } from './voxel.mjs';
+import { VoxelPool } from './voxel-pool.mjs';
 import { spaceRenderOptions, spaceAltitude } from './space-view.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,7 @@ const DEFAULTS = {
   render: { maxSse: 12, falloff: 600, viewportHeight: 1080, fovDeg: 70, far: 8000, fineRadius: 160, maxTiles: 900 },
   superchunkCache: 48,
   decodedTileCache: 1500,
+  voxelWorkers: null, // worker thread count; null = auto (CPUs - 1), 0 = sync
 };
 
 export function loadConfig(file = path.join(serviceDir, 'config.json')) {
@@ -48,6 +50,7 @@ export function loadConfig(file = path.join(serviceDir, 'config.json')) {
   if (rwmcEnv('ROOT_URL')) cfg.rootUrl = rwmcEnv('ROOT_URL');
   if (rwmcEnv('PORT')) cfg.port = Number(rwmcEnv('PORT'));
   if (rwmcEnv('DISK_CACHE') !== undefined) cfg.diskCache = rwmcEnv('DISK_CACHE') !== '0';
+  if (rwmcEnv('VOXEL_WORKERS') !== undefined) cfg.voxelWorkers = Number(rwmcEnv('VOXEL_WORKERS'));
   cfg.cacheDir = path.resolve(serviceDir, cfg.cacheDir);
   return cfg;
 }
@@ -62,6 +65,11 @@ export class EarthService {
     this.client = new TileClient(cfg);
     this.frames = new Map();
     this.superchunks = new Map();
+    this.voxelPool = new VoxelPool(cfg.voxelWorkers);
+  }
+
+  close() {
+    this.voxelPool?.close();
   }
 
   frame(lat, lon, h) {
@@ -108,7 +116,7 @@ export class EarthService {
       const x0 = sx * SC - MARGIN, z0 = sz * SC - MARGIN, w = SC + 2 * MARGIN;
       const nodes = await collectRegionTiles(this.client, frame, [x0, minY - 1, z0], [x0 + w, minY + height + 1, z0 + w], this.cfg.collisionError);
       const [meshes, water] = await Promise.all([this.meshesFor(nodes), this.waterFor(frame, x0, z0, w)]);
-      const { vox, waterLevel, surfaceColumns } = voxelizeArea(frame, meshes, x0, z0, w, minY, height, { fallbackGround: Y_BASE - 1, water });
+      const { vox, waterLevel, surfaceColumns } = await this.voxelPool.voxelize(frame, meshes, x0, z0, w, minY, height, { fallbackGround: Y_BASE - 1, water });
       if (!surfaceColumns) throw Object.assign(new Error('No usable 3D terrain in this area. Try another location; no flat replacement was generated.'), { status: 404 });
       console.log(`[chunk] superchunk ${sx},${sz}: ${nodes.length} tiles${waterLevel != null ? `, water at y=${waterLevel}` : ''}, ${Date.now() - t0} ms`);
       return { vox, x0, z0, w };
@@ -287,7 +295,7 @@ function num(q, name) {
 }
 
 export function createServer(service) {
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const q = url.searchParams;
     try {
@@ -337,6 +345,10 @@ export function createServer(service) {
       return json(res, { error: e.message }, status);
     }
   });
+  server.on('close', () => {
+    service?.close?.();
+  });
+  return server;
 }
 
 function json(res, obj, status = 200) {
@@ -352,7 +364,10 @@ export async function startTerrainServer() {
     console.warn('WARNING: no Google API key set. Put it into service/config.json ("apiKey").');
   }
   const service = new EarthService(cfg);
-  process.once('exit',()=>cfg.usage.flush());
+  process.once('exit', () => {
+    cfg.usage.flush();
+    service.close();
+  });
   return createServer(service).listen(cfg.port, '127.0.0.1', () => {
     console.log(`RealWorldMC service listening on http://127.0.0.1:${cfg.port}  (tiles: ${new URL(cfg.rootUrl).host})`);
   });

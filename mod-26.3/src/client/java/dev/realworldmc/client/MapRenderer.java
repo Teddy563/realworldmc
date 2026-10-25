@@ -146,8 +146,8 @@ public final class MapRenderer {
 		List<EarthRegions.Region> all = regions;
 		if (all == null || mc.level == null || mc.gameRenderer == null || mc.level.dimension() != Level.OVERWORLD) return;
 		Vec3 camAbs = mc.gameRenderer.mainCamera().position();
-		int index = EarthRegions.indexAt(camAbs.x, camAbs.z);
-		EarthRegions.Region region = index >= 0 && index < all.size() && !Double.isNaN(all.get(index).groundHeight()) ? all.get(index) : null;
+		EarthRegions.Region region = EarthRegions.at(camAbs.x, camAbs.z);
+		if (region != null && Double.isNaN(region.groundHeight())) region = null;
 		if (!java.util.Objects.equals(region, current)) switchRegion(region);
 		if (region == null) return;
 		if (++tickCounter % 10 != 0 || !selecting.compareAndSet(false, true)) return;

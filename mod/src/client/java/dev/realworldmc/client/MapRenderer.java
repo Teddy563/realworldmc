@@ -195,8 +195,9 @@ public final class MapRenderer {
         final Vec3 lookAhead=ahead;
 		selector.execute(() -> {
 			try {
-				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d&aheadX=%.2f&aheadZ=%.2f",
-					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0, lookAhead.x, lookAhead.z);
+				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d&aheadX=%.2f&aheadZ=%.2f&fineRadius=%d&far=%d&maxTiles=%d&maxSse=%d",
+					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0, lookAhead.x, lookAhead.z,
+					EarthSettings.getFineRadius(), EarthSettings.getFar(), EarthSettings.getMaxTiles(), EarthSettings.getMaxSse());
 				JsonObject res = ServiceClient.getJson(q, Duration.ofSeconds(30));
 				if (myEpoch != epoch) return;
 				List<Want> list = new ArrayList<>();

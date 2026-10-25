@@ -15,6 +15,8 @@ public class RealWorldMCClient implements ClientModInitializer {
 	public void onInitializeClient() {
         SetupScreen.register();
         HelpScreen.register();
+        UpdateScreen.register();
+        EarthSettingsScreen.register();
         UpdateChecker.checkAsync();
         ClientTickEvents.END_CLIENT_TICK.register(dev.realworldmc.client.map.OsmTileCache::tick);
 

@@ -100,6 +100,10 @@ public class RealWorldMC implements ModInitializer {
                     ctx.getSource().sendSuccess(() -> RWMessages.message("Check the update status in the in-game menu or run /earth update on the client."), false);
                     return 1;
                 }))
+                .then(Commands.literal("settings").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> RWMessages.message("Open RealWorldMC render settings with /earth settings on the client."), false);
+                    return 1;
+                }))
                 .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))
                 .then(Commands.literal("moon").executes(ctx -> spaceHelp(ctx.getSource())))
                 .then(Commands.literal("mars").executes(ctx -> spaceHelp(ctx.getSource())))

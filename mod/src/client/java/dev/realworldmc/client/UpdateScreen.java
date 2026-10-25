@@ -32,26 +32,31 @@ public final class UpdateScreen extends Screen {
         this.release = release;
     }
 
+    private static volatile boolean openRequested = false;
+
     public static void register() {
         net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String c = command.strip().toLowerCase(java.util.Locale.ROOT);
-            if (c.equals("earth update") || c.equals("rw update")) {
-                var mc = net.minecraft.client.Minecraft.getInstance();
-                mc.execute(() -> {
-                    var rel = UpdateChecker.getLatestRelease();
-                    var screen = new UpdateScreen(mc.screen, rel);
-                    mc.setScreen(screen);
-                    if (rel == null) {
-                        UpdateChecker.checkAsync().thenAccept(fresh -> {
-                            mc.execute(() -> {
-                                screen.updateRelease(fresh);
-                            });
-                        });
-                    }
-                });
+            if (c.startsWith("/")) c = c.substring(1).stripLeading();
+            if (c.matches("(?:rw|earth)\\s+update.*")) {
+                openRequested = true;
                 return false;
             }
             return true;
+        });
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (openRequested) {
+                openRequested = false;
+                var rel = UpdateChecker.getLatestRelease();
+                var screen = new UpdateScreen(client.screen, rel);
+                client.setScreen(screen);
+                if (rel == null) {
+                    UpdateChecker.checkAsync().thenAccept(fresh -> {
+                        client.execute(() -> screen.updateRelease(fresh));
+                    });
+                }
+            }
         });
     }
 

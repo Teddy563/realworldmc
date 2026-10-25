@@ -22,7 +22,8 @@
     "MinimapFBORendererMixin",
     "GuiMapMixin",
     "SupportXaeroWorldmapMixin",
-    "StreetShortcutMixin"
+    "StreetShortcutMixin",
+    "PauseScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

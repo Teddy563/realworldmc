@@ -32,6 +32,21 @@ public final class UpdateScreen extends Screen {
         this.release = release;
     }
 
+    public static void register() {
+        net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
+            String c = command.strip().toLowerCase(java.util.Locale.ROOT);
+            if (c.equals("earth update") || c.equals("rw update")) {
+                var mc = net.minecraft.client.Minecraft.getInstance();
+                mc.execute(() -> {
+                    var rel = UpdateChecker.getAvailableUpdate();
+                    mc.setScreen(new UpdateScreen(mc.screen, rel));
+                });
+                return false;
+            }
+            return true;
+        });
+    }
+
     @Override
     public boolean isPauseScreen() {
         return true;

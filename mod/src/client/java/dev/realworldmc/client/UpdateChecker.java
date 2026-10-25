@@ -26,9 +26,9 @@ public final class UpdateChecker {
             .map(m -> m.getMetadata().getVersion().getFriendlyString())
             .orElse("1.0.3");
 
-    public record ReleaseInfo(String version, String name, String changelog, String downloadUrl, String jarName, long size) {}
+    public record ReleaseInfo(String version, String name, String changelog, String downloadUrl, String jarName, long size, boolean isNewer) {}
 
-    private static volatile ReleaseInfo availableUpdate = null;
+    private static volatile ReleaseInfo latestRelease = null;
     private static volatile boolean checked = false;
     private static volatile boolean checking = false;
 
@@ -38,16 +38,24 @@ public final class UpdateChecker {
         return CURRENT_VERSION;
     }
 
+    public static ReleaseInfo getLatestRelease() {
+        return latestRelease;
+    }
+
     public static ReleaseInfo getAvailableUpdate() {
-        return availableUpdate;
+        return (latestRelease != null && latestRelease.isNewer()) ? latestRelease : null;
     }
 
     public static boolean hasUpdate() {
-        return availableUpdate != null;
+        return latestRelease != null && latestRelease.isNewer();
+    }
+
+    public static boolean isChecking() {
+        return checking;
     }
 
     public static CompletableFuture<ReleaseInfo> checkAsync() {
-        if (checking) return CompletableFuture.completedFuture(availableUpdate);
+        if (checking) return CompletableFuture.completedFuture(latestRelease);
         checking = true;
 
         return CompletableFuture.supplyAsync(() -> {
@@ -69,41 +77,40 @@ public final class UpdateChecker {
                     String tag = json.has("tag_name") ? json.get("tag_name").getAsString() : "";
                     String ver = tag.startsWith("v") ? tag.substring(1) : tag;
 
-                    if (isNewer(ver, CURRENT_VERSION)) {
-                        String name = json.has("name") && !json.get("name").isJsonNull() ? json.get("name").getAsString() : "RealWorldMC v" + ver;
-                        String body = json.has("body") && !json.get("body").isJsonNull() ? json.get("body").getAsString() : "";
+                    boolean newer = isNewer(ver, CURRENT_VERSION);
+                    String name = json.has("name") && !json.get("name").isJsonNull() ? json.get("name").getAsString() : "RealWorldMC v" + ver;
+                    String body = json.has("body") && !json.get("body").isJsonNull() ? json.get("body").getAsString() : "";
 
-                        String downloadUrl = null;
-                        String jarName = null;
-                        long size = 0;
+                    String downloadUrl = null;
+                    String jarName = null;
+                    long size = 0;
 
-                        if (json.has("assets") && json.get("assets").isJsonArray()) {
-                            JsonArray assets = json.getAsJsonArray("assets");
-                            for (JsonElement el : assets) {
-                                JsonObject asset = el.getAsJsonObject();
-                                String aName = asset.get("name").getAsString();
-                                // Prefer mc1.21.1 JAR asset
-                                if (aName.endsWith(".jar") && !aName.endsWith("-sources.jar") && !aName.endsWith("-dev.jar")) {
-                                    if (aName.contains("1.21.1") || downloadUrl == null) {
-                                        downloadUrl = asset.get("browser_download_url").getAsString();
-                                        jarName = aName;
-                                        size = asset.has("size") ? asset.get("size").getAsLong() : 0;
-                                        if (aName.contains("1.21.1")) break;
-                                    }
+                    if (json.has("assets") && json.get("assets").isJsonArray()) {
+                        JsonArray assets = json.getAsJsonArray("assets");
+                        for (JsonElement el : assets) {
+                            JsonObject asset = el.getAsJsonObject();
+                            String aName = asset.get("name").getAsString();
+                            // Prefer mc1.21.1 JAR asset
+                            if (aName.endsWith(".jar") && !aName.endsWith("-sources.jar") && !aName.endsWith("-dev.jar")) {
+                                if (aName.contains("1.21.1") || downloadUrl == null) {
+                                    downloadUrl = asset.get("browser_download_url").getAsString();
+                                    jarName = aName;
+                                    size = asset.has("size") ? asset.get("size").getAsLong() : 0;
+                                    if (aName.contains("1.21.1")) break;
                                 }
                             }
                         }
-
-                        availableUpdate = new ReleaseInfo(ver, name, body, downloadUrl, jarName, size);
-                        return availableUpdate;
                     }
+
+                    latestRelease = new ReleaseInfo(ver, name, body, downloadUrl, jarName, size, newer);
+                    return latestRelease;
                 }
             } catch (Exception ignored) {
             } finally {
                 checked = true;
                 checking = false;
             }
-            return null;
+            return latestRelease;
         });
     }
 

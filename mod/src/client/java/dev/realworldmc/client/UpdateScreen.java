@@ -16,7 +16,7 @@ import java.util.List;
  */
 public final class UpdateScreen extends Screen {
     private final Screen parent;
-    private final UpdateChecker.ReleaseInfo release;
+    private UpdateChecker.ReleaseInfo release;
     private int left, top, panelWidth, panelHeight;
     private int scrollOffset = 0;
     private final List<FormattedCharSequence> formattedChangelog = new ArrayList<>();
@@ -38,13 +38,32 @@ public final class UpdateScreen extends Screen {
             if (c.equals("earth update") || c.equals("rw update")) {
                 var mc = net.minecraft.client.Minecraft.getInstance();
                 mc.execute(() -> {
-                    var rel = UpdateChecker.getAvailableUpdate();
-                    mc.setScreen(new UpdateScreen(mc.screen, rel));
+                    var rel = UpdateChecker.getLatestRelease();
+                    var screen = new UpdateScreen(mc.screen, rel);
+                    mc.setScreen(screen);
+                    if (rel == null) {
+                        UpdateChecker.checkAsync().thenAccept(fresh -> {
+                            mc.execute(() -> {
+                                screen.updateRelease(fresh);
+                            });
+                        });
+                    }
                 });
                 return false;
             }
             return true;
         });
+    }
+
+    public void updateRelease(UpdateChecker.ReleaseInfo fresh) {
+        this.release = fresh;
+        prepareChangelog();
+        if (downloadButton != null) {
+            boolean isNewer = release != null && release.isNewer();
+            Component btnText = isNewer ? Component.translatable("gui.realworldmc.update.download") : Component.translatable("gui.realworldmc.update.reinstall");
+            downloadButton.setMessage(btnText);
+            downloadButton.active = release != null && !downloading && !completed;
+        }
     }
 
     @Override
@@ -63,11 +82,15 @@ public final class UpdateScreen extends Screen {
 
         int buttonY = top + panelHeight - 32;
 
+        boolean isNewer = release != null && release.isNewer();
+        Component btnText = completed ? Component.translatable("gui.realworldmc.update.ready") :
+                (isNewer ? Component.translatable("gui.realworldmc.update.download") : Component.translatable("gui.realworldmc.update.reinstall"));
+
         downloadButton = addRenderableWidget(Button.builder(
-                completed ? Component.translatable("gui.realworldmc.update.ready") : Component.translatable("gui.realworldmc.update.download"),
+                btnText,
                 b -> startDownload()
         ).bounds(left + 12, buttonY, 150, 20).build());
-        downloadButton.active = !downloading && !completed;
+        downloadButton.active = release != null && !downloading && !completed;
 
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.realworldmc.update.close"),
@@ -77,8 +100,12 @@ public final class UpdateScreen extends Screen {
 
     private void prepareChangelog() {
         formattedChangelog.clear();
-        if (release == null || release.changelog() == null || release.changelog().isBlank()) {
-            formattedChangelog.addAll(font.split(Component.literal("No changelog provided."), panelWidth - 36));
+        if (release == null) {
+            formattedChangelog.addAll(font.split(Component.translatable("gui.realworldmc.update.connecting"), panelWidth - 36));
+            return;
+        }
+        if (release.changelog() == null || release.changelog().isBlank()) {
+            formattedChangelog.addAll(font.split(Component.literal("Brak opisu zmian (No changelog provided)."), panelWidth - 36));
             return;
         }
 
@@ -142,21 +169,31 @@ public final class UpdateScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        g.fill(0, 0, width, height, 0x66000000);
-        g.fill(left, top, left + panelWidth, top + panelHeight, RWTheme.BACKGROUND);
+        g.fill(0, 0, width, height, 0xC0000000);
+        g.fill(left, top, left + panelWidth, top + panelHeight, 0xFF1E2224);
         g.fill(left, top, left + 3, top + panelHeight, RWTheme.BRAND);
 
         // Header
-        g.drawString(font, Component.translatable("gui.realworldmc.update.heading"), left + 14, top + 12, RWTheme.GREEN, false);
-        String versionStr = "Current: v" + UpdateChecker.getCurrentVersion() + "  ->  §aNew: v" + (release != null ? release.version() : "?");
-        g.drawString(font, versionStr, left + 14, top + 26, RWTheme.MUTED, false);
+        boolean isNewer = release != null && release.isNewer();
+        if (release == null) {
+            g.drawString(font, Component.translatable("gui.realworldmc.update.checking"), left + 14, top + 12, RWTheme.GREEN, false);
+            g.drawString(font, "Current: v" + UpdateChecker.getCurrentVersion() + " (Connecting to GitHub...)", left + 14, top + 26, RWTheme.MUTED, false);
+        } else if (isNewer) {
+            g.drawString(font, Component.translatable("gui.realworldmc.update.heading"), left + 14, top + 12, RWTheme.GREEN, false);
+            String versionStr = "Current: v" + UpdateChecker.getCurrentVersion() + "  ->  §aNew: v" + release.version();
+            g.drawString(font, versionStr, left + 14, top + 26, RWTheme.MUTED, false);
+        } else {
+            g.drawString(font, Component.translatable("gui.realworldmc.update.up_to_date"), left + 14, top + 12, RWTheme.GREEN, false);
+            String versionStr = "Wersja: v" + UpdateChecker.getCurrentVersion() + " §a(Najnowsza wersja)§r";
+            g.drawString(font, versionStr, left + 14, top + 26, RWTheme.MUTED, false);
+        }
 
         // Changelog Box
         int boxX = left + 12, boxY = top + 42, boxW = panelWidth - 24, boxH = panelHeight - 88;
-        g.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0x33000000);
+        g.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xFF141719);
 
         g.enableScissor(boxX, boxY, boxX + boxW, boxY + boxH);
-        int textY = boxY + 4 - scrollOffset;
+        int textY = boxY + 6 - scrollOffset;
         for (var line : formattedChangelog) {
             if (textY + 10 >= boxY && textY <= boxY + boxH) {
                 g.drawString(font, line, boxX + 6, textY, 0xDDDDDD, false);

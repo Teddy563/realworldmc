@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.4 (unreleased)
+## 1.0.4 - 2026-10-27
 
 - Add a Fabric 1.20.1 build and clean base pack, with Java 17 checks.
 - Replace rocket/flight redirects that conflict with older MixinExtras annotation handling.

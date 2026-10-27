@@ -52,3 +52,17 @@ Linux, macOS and Windows ARM do not have a bundled runtime. Install Node.js 22+.
 For the optional browser companion on 1.21.1, add a restricted Maps JavaScript API `browserKey` in `realworldmc-service/streetview.config.json`, keeping it separate from the native `tilesKey`. Restart Minecraft after manual file edits. The first-run screen configures the native key, not browser access.
 
 For Propwash FPV and the 26.3 target, see [experimental 26.3](experimental-26.3.md).
+
+
+## Installing a JAR instead of a pack
+
+RealWorldMC is a Fabric mod, not a datapack. Do not put it in a world's `datapacks` folder.
+
+1. Create a Fabric profile for the exact Minecraft version on the download.
+2. Install Fabric API for that same version.
+3. Put the RealWorldMC JAR in that profile's `mods` folder. Remove older RealWorldMC JARs first.
+4. Start that profile and complete the setup screen.
+
+For a `.mrpack`, use the import option in Modrinth App or Prism Launcher. Do not put the pack in `mods` or `datapacks`.
+
+The next release includes a Fabric 1.20.1 build targeting Java 17, alongside the recommended 1.21.1 build (Java 21). Use the matching download, never a JAR for another Minecraft version. The base 1.20.1 pack contains RealWorldMC and Fabric API; the optional personal Heroes pack is not required.

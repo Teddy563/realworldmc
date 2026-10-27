@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.4 - 2026-10-27
+
+- Add a Fabric 1.20.1 build and clean base pack, with Java 17 checks.
+- Replace rocket/flight redirects that conflict with older MixinExtras annotation handling.
+- Prepare adjacent terrain by geographic coordinates and guard against crossing into unrelated saved regions.
+- Bound background voxel workers and recover queued work after worker crashes.
+- Add native render settings, Polish strings and a read-only release checker. Updates still require closing Minecraft and replacing the matching JAR.
+- Clarify JAR and modpack installation. RealWorldMC is not a datapack.
+
+Live provider transitions, fresh graphical setup and cross-platform gameplay still need release validation. See [the test record](docs/release-1.0.4.md).
+
 ## 1.0.3 (2026-10-18)
 
 - Integrate itzSelestia's Xaero minimap/world-map contribution, preserving the original commits; improve geographic overlays, caching and dimension isolation.

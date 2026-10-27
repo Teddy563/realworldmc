@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "earthcraft:map_stone",
+    "earthcraft:map_asphalt",
+    "earthcraft:map_plaster",
+    "earthcraft:map_brick"
+  ]
+}

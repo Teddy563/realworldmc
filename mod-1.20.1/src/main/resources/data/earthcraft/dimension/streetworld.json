@@ -1,0 +1,10 @@
+{
+  "type": "earthcraft:streetworld",
+  "generator": {
+    "type": "earthcraft:streetworld",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "minecraft:plains"
+    }
+  }
+}

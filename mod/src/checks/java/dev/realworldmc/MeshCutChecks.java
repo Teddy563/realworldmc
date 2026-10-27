@@ -12,7 +12,7 @@ public final class MeshCutChecks {
             check(Math.abs(v.u()-v.x()/8)<1e-9 && Math.abs(v.v()-v.y()/8)<1e-9,"Texture interpolation must remain seamless");
             check(!(v.x()>1 && v.x()<2 && v.y()>1 && v.y()<2),"No retained vertex inside the hole");
         }
-        check(MeshCut.subtract(wall,new MeshCut.Box(20,20,20,21,21,21)).getFirst()==wall,"Nonintersecting triangles must be reused");
+        check(MeshCut.subtract(wall,new MeshCut.Box(20,20,20,21,21,21)).get(0)==wall,"Nonintersecting triangles must be reused");
         check(MeshCut.subtract(wall,new MeshCut.Box(-1,-1,-1,9,9,1)).isEmpty(),"Fully destroyed surface must disappear");
         double again=cut.stream().flatMap(p->MeshCut.subtract(p,hole).stream()).mapToDouble(MeshCut::area).sum();
         check(Math.abs(again-area)<1e-9,"Repeated cuts must not expand damage");

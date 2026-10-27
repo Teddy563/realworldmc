@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-These instructions are for **1.21.1**. On 26.2, Street View opens the browser companion; native photo gameplay is not included.
+These instructions cover the native **1.20.1 and 1.21.1** builds. On 26.2 and 26.3, Street View opens the browser companion; native photo gameplay is not included.
 
 ## Travel
 
@@ -17,9 +17,9 @@ These instructions are for **1.21.1**. On 26.2, Street View opens the browser co
 
 `/earth setlocation 44.427454 26.087287` changes the start for **new worlds** and requires command permission. Existing worlds keep their own origin.
 
-## Glide and fly
+## Flight
 
-`/earth fly` toggles equipment-free flight. Steve automatically glides while moving quickly and stands upright when hovering or moving straight up/down. `/earth glide` enables the same mode. Add `on` or `off` to either command; `/rw` works too. These modes require Creative singleplayer.
+`/earth fly` toggles equipment-free flight. Steve automatically glides while moving quickly and stands upright when hovering or moving straight up/down. Add `on` or `off` to set it explicitly; `/rw` works too. These modes require Creative singleplayer.
 
 W/S move forward/back, A/D strafe, arrow up/down changes speed, and Space/Shift rises/descends. Release movement keys to slow to a hover. Fireworks provide an optional boost. See [the flight guide](flight.md) for speeds, camera behaviour and globe transitions.
 
@@ -50,7 +50,7 @@ Your rebound camera toggle also works. Entering or leaving Street View preserves
 
 `/earth help` shows the main commands. Click a yellow command to fill chat, then enter its arguments. `/earth help more` shows extra options.
 
-Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. In the prepared 1.0.1 build, photo loading and short control hints appear in stacked lines above the bottom-left map credits. The larger white arrows turn yellow when selected. Loading updates do not fill chat.
+Messages use a green **RW**, a dark gray separator and white text. Commands are pale yellow. `/earth goto` uses a green boss bar with three stages; these are not download percentages. Photo loading and short control hints appear in stacked lines above the bottom-left map credits. The larger white arrows turn yellow when selected. Loading updates do not fill chat.
 
 `/earth hud` toggles this corner information. Add `on` or `off` to set it explicitly. The setting persists; normal chat, loading boss bars, navigation arrows and other mods' messages are unaffected. Opening chat hides the controls so they do not overlap it.
 
@@ -58,12 +58,18 @@ Street View uses fixed daylight and softly shaded blocks. Lighting in a 360-degr
 
 ## Experimental space filming
 
-The local experimental 1.21.1 build also has [Earth-to-space filming controls](space-flight.md). They are not in the published v1.0.0 download.
+The native builds include [experimental Earth-to-space filming controls](space-flight.md).
 
 In Creative singleplayer, fly above 2 km over your region's ground reference to enter automatically. Space/Shift change altitude; W/S cruise and A/D strafe. Descend below 1.6 km to resume local flight. `/earth space` starts ascent earlier; `/earth space return` goes back to the entry point. The threshold uses the region's saved ground height, not a live terrain measurement under the player.
 
-The prepared 1.0.1 build also accepts `/rw moon`, `/rw mars` and `/rw earth` for orbital flyovers and return to Earth orbit. The `/earth` prefix works too. Above 100 km, aim at a destination marker and hold W for 2.5 seconds to travel. Release W or look away to cancel. See [space flight](space-flight.md) for imagery limits and [planetary data](planetary-data.md) for sources.
+The native builds also accept `/rw moon`, `/rw mars` and `/rw earth` for orbital flyovers and return to Earth orbit. The `/earth` prefix works too. Above 100 km, aim at a destination marker and hold W for 2.5 seconds to travel. Release W or look away to cancel. See [space flight](space-flight.md) for imagery limits and [planetary data](planetary-data.md) for sources.
 
 ## New-world starting place
 
 New Real World worlds choose from [100 places](spawn-locations.md). Operator commands `/earth setlocation random` and `/earth setlocation <lat> <lon>` control future worlds only. Saved worlds never move.
+
+## Detail and updates
+
+`/earth settings` opens map detail controls on the native builds. Changes apply to new tile requests; they do not edit provider keys. Higher settings use more memory and requests.
+
+`/earth update` checks the latest GitHub release and opens its notes. It does not replace files while Minecraft is running. Back up worlds, close Minecraft, then replace the old JAR with the matching Minecraft version. `/rw` is an alias for both commands.

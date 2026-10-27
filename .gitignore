@@ -38,3 +38,9 @@ mod-26.3/run/
 mod-26.3/run-render-check/
 mod/run-map-check-*/
 mod/run-walking-check/
+
+# Fabric 1.20.1 backport: source is tracked, local builds and test worlds are not.
+mod-1.20.1/build/
+mod-1.20.1/.gradle/
+mod-1.20.1/run/
+mod-1.20.1/run-*/

@@ -21,6 +21,8 @@ public final class EarthRegions {
 	public static final int GRID = 400;         // regions per row; 400 * 50k = 20M < world border
 	/** Places closer than this to an existing region center reuse that region. */
 	public static final double REUSE_RADIUS = 15_000;
+	/** Maximum block radius from region center; beyond this lies the natural buffer zone between places. */
+	public static final double MAX_REGION_RADIUS = 22_000;
 
 	public record Region(int index, double latitude, double longitude, double groundHeight) {
 		public int offsetX() {
@@ -39,16 +41,20 @@ public final class EarthRegions {
 
 	private EarthRegions() {}
 
-	/** Region whose cell contains the block position, or null. */
-	public static Region at(double x, double z) {
-		int index = indexAt(x, z);
-		return index >= 0 && index < regions.size() ? regions.get(index) : null;
-	}
+	/** Region whose cell contains the block position within active radius, or null in the buffer zone. */
+    public static Region at(double x,double z) { return at(regions,x,z); }
+    public static Region at(List<Region> list,double x,double z) {
+        if(list==null || !Double.isFinite(x) || !Double.isFinite(z))return null;
+        int index=indexAt(x,z);
+        if(index<0 || index>=list.size())return null;
+        var region=list.get(index);
+        return Math.hypot(x-region.offsetX(),z-region.offsetZ())<=MAX_REGION_RADIUS?region:null;
+    }
 
 	/** Grid cell index for a block position (-1 outside the grid). Same on client and server. */
 	public static int indexAt(double x, double z) {
 		long gx = Math.round(x / SPACING), gz = Math.round(z / SPACING);
-		if (gx < 0 || gz < 0 || gx >= GRID) return -1;
+		if (gx < 0 || gz < 0 || gx >= GRID || gz >= GRID) return -1;
 		return (int) (gz * GRID + gx);
 	}
 

@@ -37,6 +37,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - minecraft: '1.20.1'
+            module: mod-1.20.1
+            java: '21'
           - minecraft: '1.21.1'
             module: mod
             java: '21'
@@ -75,6 +78,12 @@ jobs:
         working-directory: ${{ matrix.module }}
         run: |
           ./gradlew.bat --no-daemon build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test 1.20.1 saved worlds
+        if: matrix.minecraft == '1.20.1'
+        working-directory: mod-1.20.1
+        run: |
+          ./gradlew.bat --no-daemon runGameTest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test 1.21.1 gameplay logic
         if: matrix.minecraft == '1.21.1'

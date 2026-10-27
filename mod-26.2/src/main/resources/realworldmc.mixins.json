@@ -2,6 +2,10 @@
   "required": true,
   "package": "dev.realworldmc.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
-  "injectors": { "defaultRequire": 1 }
+  "mixins": [
+    "RegionMoveMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

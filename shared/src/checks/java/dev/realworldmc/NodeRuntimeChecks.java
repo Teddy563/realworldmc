@@ -31,7 +31,7 @@ public final class NodeRuntimeChecks {
             Path versions = root.resolve("versions");
             for (String v : List.of("v9.11.2", "v22.9.0", "v22.10.0", "default", "v24.0.0")) Files.createDirectories(versions.resolve(v));
             var sorted = NodeRuntime.nvmCandidates(versions);
-            check(sorted.size() == 4 && sorted.getFirst().contains("v24.0.0") && sorted.get(1).contains("v22.10.0"), "Sort Node versions numerically");
+            check(sorted.size() == 4 && sorted.get(0).contains("v24.0.0") && sorted.get(1).contains("v22.10.0"), "Sort Node versions numerically");
             check(NodeRuntime.nvmCandidates(root.resolve("absent")).isEmpty(), "Missing NVM is optional");
             check(NodeRuntime.choose(List.of("node")).equals("node"), "Use working PATH installation");
             if (System.getProperty("os.name").startsWith("Windows")) {

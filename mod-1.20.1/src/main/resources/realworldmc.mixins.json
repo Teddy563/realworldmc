@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "dev.realworldmc.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "StreetEditsMixin",
+    "StreetWalkMixin",
+    "StreetWalkPlayerMixin",
+    "FlightRocketItemMixin",
+    "FlightRocketMixin",
+    "RegionMoveMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,119 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = "realworldmc-mc1.20.1"
+}
+
+repositories {
+    maven {
+        url "https://chocolateminecraft.com/maven"
+        name "Xaero's Maven"
+    }
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"realworldmc" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modCompileOnly "xaero.minimap:xaerominimap-fabric-1.20.1:26.6.0"
+	modCompileOnly "xaero.map:xaeroworldmap-fabric-1.20.1:1.47.0"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 17
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.named('jar') {
+	from('../LICENSE')
+	from('../NOTICE')
+	from('../LICENSES') { into 'LICENSES' }
+}
+
+sourceSets {
+	main { java.srcDir '../shared/src/main/java' }
+}
+
+// Run the existing service/setup checks against the backport classes too.
+sourceSets {
+    checks {
+        java.srcDir '../shared/src/checks/java'
+        java.srcDir '../mod/src/checks/java'
+        java.include 'dev/realworldmc/ReleaseMetadataChecks.java', 'dev/realworldmc/RegionBoundaryChecks.java', 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java', 'dev/realworldmc/NodeRuntimeChecks.java', 'dev/realworldmc/SetupChecks.java', 'dev/realworldmc/ServiceRuntimeChecks.java', 'dev/realworldmc/StreetNavigationChecks.java', 'dev/realworldmc/MeshCutChecks.java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+['BundledService', 'SpawnLocation', 'NodeRuntime', 'Setup', 'ServiceRuntime', 'StreetNavigation', 'MeshCut'].each { name ->
+    def taskName = name[0].toLowerCase() + name.substring(1) + 'Checks'
+    tasks.register(taskName, JavaExec) {
+        dependsOn tasks.named('checksClasses')
+        classpath = sourceSets.checks.runtimeClasspath
+        mainClass = "dev.realworldmc.${name}Checks"
+    }
+    tasks.named('check') { dependsOn tasks.named(taskName) }
+}
+tasks.register('standaloneJarChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    doFirst { if (!project.hasProperty('releaseJar')) throw new GradleException('Pass -PreleaseJar=path/to/release.jar') }
+    classpath = files(project.findProperty('releaseJar') ?: 'missing.jar') + sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+    args 'release'
+    environment 'PATH', ''
+}
+
+tasks.register('regionBoundaryChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.RegionBoundaryChecks'
+}
+tasks.named('check') { dependsOn tasks.named('regionBoundaryChecks') }
+
+tasks.register('releaseMetadataChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.ReleaseMetadataChecks'
+}
+tasks.named('check') { dependsOn tasks.named('releaseMetadataChecks') }
+
+// Exercise Java 17 at runtime without requiring Gradle itself to run on Java 17.
+tasks.withType(JavaExec).configureEach {
+    if (project.hasProperty('checksJava')) executable = project.property('checksJava')
+}
+
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'realworldmc-gametest'
+        enableGameTests = true
+        enableClientGameTests = false
+    }
+}

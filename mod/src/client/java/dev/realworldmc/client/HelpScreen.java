@@ -25,6 +25,8 @@ public final class HelpScreen extends Screen {
         new Entry("Movement","/earth walk on|off","Walk inside 3×3, or stay at the photo center. V also toggles."),
         new Entry("Movement","/earth camera first|back|front","Choose your perspective. F5 also changes camera."),
         new Entry("Movement","/earth streetkey on|off","Toggle Sneak + Swap Offhand with empty hands (usually Shift + F)."),
+        new Entry("Display","/earth settings","Adjust map detail and rendering limits."),
+        new Entry("Display","/earth update","Check releases and installation instructions."),
         new Entry("Display","/earth hud on|off","Show or hide the optional HUD and navigation arrows."),
         new Entry("Display","/earth usage on|off","Show or hide usage estimates separately."),
         new Entry("Display","/earth controls on|off","Show or hide key hints separately."),
@@ -41,7 +43,7 @@ public final class HelpScreen extends Screen {
     };
     private static int requested=-1;
     private int page,left,top,panelWidth,panelHeight,perPage;
-    public HelpScreen(boolean advanced){super(Component.literal("Earth guide"));page=advanced?-1:0;}
+    public HelpScreen(boolean advanced){super(Component.translatable("gui.realworldmc.guide.title"));page=advanced?-1:0;}
     public static void register(){
         ClientSendMessageEvents.ALLOW_COMMAND.register(command->{
             String normalized=command.strip().replaceAll("\\s+"," ");
@@ -67,16 +69,18 @@ public final class HelpScreen extends Screen {
             addRenderableWidget(new GuideButton(left+10,y,panelWidth-20,40,entry.command(),()->minecraft.setScreen(new ChatScreen(entry.command())),entry));
         }
         int y=top+panelHeight-29;
-        var previous=addRenderableWidget(new GuideButton(left+10,y,76,20,"Previous",()->{page--;rebuildWidgets();},null));previous.active=page>0;
-        var next=addRenderableWidget(new GuideButton(left+92,y,76,20,"Next",()->{page++;rebuildWidgets();},null));next.active=end<ENTRIES.length;
-        addRenderableWidget(new GuideButton(left+panelWidth-86,y,76,20,"Close",this::onClose,null));
+        var previous=addRenderableWidget(new GuideButton(left+10,y,70,20,Component.translatable("gui.realworldmc.guide.previous").getString(),()->{page--;rebuildWidgets();},null));previous.active=page>0;
+        var next=addRenderableWidget(new GuideButton(left+84,y,70,20,Component.translatable("gui.realworldmc.guide.next").getString(),()->{page++;rebuildWidgets();},null));next.active=end<ENTRIES.length;
+
+        addRenderableWidget(new GuideButton(left+panelWidth-76,y,70,20,Component.translatable("gui.realworldmc.guide.close").getString(),this::onClose,null));
     }
     @Override public void render(GuiGraphics g,int mouseX,int mouseY,float delta){
         g.fill(0,0,width,height,0x55000000);
         g.fill(left,top,left+panelWidth,top+panelHeight,RWTheme.BACKGROUND);
         g.fill(left,top,left+3,top+panelHeight,RWTheme.BRAND);
-        g.drawString(font,"Earth guide · "+ENTRIES[page*perPage].group(),left+12,top+10,RWTheme.GREEN,false);
-        g.drawString(font,"Select to fill chat · Esc to close",left+12,top+25,RWTheme.MUTED,false);
+        String title = Component.translatable("gui.realworldmc.guide.title").getString();
+        g.drawString(font,title+" · "+ENTRIES[page*perPage].group(),left+12,top+10,RWTheme.GREEN,false);
+        g.drawString(font,Component.translatable("gui.realworldmc.guide.subtitle").getString(),left+12,top+25,RWTheme.MUTED,false);
         String counter=(page+1)+" / "+((ENTRIES.length+perPage-1)/perPage);
         g.drawString(font,counter,left+panelWidth-font.width(counter)-12,top+10,RWTheme.MUTED,false);
         super.render(g,mouseX,mouseY,delta);

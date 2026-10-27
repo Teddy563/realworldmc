@@ -2,7 +2,13 @@
 
 Reviewed 27 October 2026. Required release target for 1.0.4; not published yet.
 
-## Source and evidence
+## Integration status
+
+The port is tracked on `release/1.0.4` with its own clean base pack. The previous personal manifest is preserved as `modpack/heroes-1.20.1.index.json`; it is not the default download. Builds use version 1.0.4 and release filenames `RealWorldMC-1.0.4-mc1.20.1.*`.
+
+Shared checks and two Minecraft GameTests pass on Java 17, including generator Codec and saved-region round trips. This tests serialization, not a full graphical save/quit/reopen session. Region travel, safe release notices and render settings are backported. The current service is bundled during packaging. See [validation](release-1.0.4.md) for remaining live checks.
+
+## Original source and evidence
 
 - Source: `mod-1.20.1/`, copied/backported from the 1.0.3 native implementation.
 - Pack manifest: `modpack/1.20.1.index.json`, currently named RealWorldMC Heroes.

@@ -1,6 +1,6 @@
 # RealWorldMC 1.0.4 implementation plan
 
-Audit: 27 October 2026. Planning and source tracking only; no PR merged or release created.
+Updated 27 October 2026. Implemented locally on `release/1.0.4`; no remote PR merged, push, tag or release. See [validation and manual gates](release-1.0.4.md). The sections below retain the original audit and acceptance criteria.
 
 ## Baseline
 

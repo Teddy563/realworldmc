@@ -1,3 +1,13 @@
+# Current handoff: 1.0.4 local candidate
+
+Work is on `release/1.0.4` in `D:\RealWorldMC`. No remote push, merge, tag or publication was performed for this candidate. Four targets are tracked: 1.20.1, recommended 1.21.1, experimental 26.2 and 26.3. The website is separate and unchanged.
+
+Start with [validation and remaining work](docs/release-1.0.4.md), [1.20.1 port handoff](docs/port-1.20.1-handoff.md), [release instructions](docs/releases.md) and [draft release notes](docs/releases/v1.0.4.md). PR #9 and #10 commits were imported locally with follow-up safety fixes; do not merge their original heads and assume those fixes are included.
+
+The following sections are historical architecture notes. Older version labels describe their original snapshot.
+
+---
+
 # RealWorldMC handoff
 
 ## 1.0.2 preparation, 15 October 2026

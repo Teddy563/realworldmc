@@ -1,6 +1,6 @@
 # Build and publish
 
-The `release.yml` GitHub workflow builds all three targets, checks the code and
+The `release.yml` GitHub workflow builds all four targets, checks the code and
 packages standalone Windows x64 JARs, importable .mrpacks and optional ZIPs. Minecraft 26.2 and 26.3 remain experimental even when included in a
 normal RealWorldMC release.
 
@@ -8,7 +8,7 @@ normal RealWorldMC release.
 
 | GitHub event | Result |
 |---|---|
-| Push to `main` or a pull request into `main` | Build and test all three targets, then upload downloadable Actions artifacts. Nothing is published. |
+| Push to `main` or a pull request into `main` | Build and test all four targets, then upload downloadable Actions artifacts. Nothing is published. |
 | Manual Run workflow | The same build and package checks, without publishing. |
 | Push a matching `v*` tag | Build and test, then publish JARs, modpacks, ZIPs and SHA-256 checksums together. |
 
@@ -20,7 +20,7 @@ Review the [manual checklist](../RELEASE-CHECKLIST.md). Commit source and the sm
 
 The workflow is local until committed and pushed. Pushing `main` verifies the build first. A later version tag is the step that publishes the release, so do not tag until the in-game checks are complete.
 
-1. Update `version` in all three Gradle projects, the changelog and service package version.
+1. Update `version` in all four Gradle projects, the changelog and service package version.
 2. Put the approved notes in `docs/releases/<tag>.md`, for example `docs/releases/v1.0.2.md`, then commit the tested source, including `.github/workflows/release.yml`.
 3. Push a matching tag, for example `v1.0.2`. Tags with a suffix such as `v1.0.1-rc.1` publish a prerelease.
 4. Wait for all builds. The workflow uploads all files to a draft with the approved notes, then publishes it. If no notes file exists, it generates notes from Git history.
@@ -28,21 +28,17 @@ The workflow is local until committed and pushed. Pushing `main` verifies the bu
 
 Do not reuse an existing release tag; fix and release a new version.
 
-Standalone downloads are named `RealWorldMC-VERSION-mc1.21.1.jar` and `RealWorldMC-VERSION-mc26.2.jar`. These include a checksum-verified service archive and private runtime; older thin JAR filenames are intentionally not selected by the site.
+Downloads use `RealWorldMC-VERSION-mcMINECRAFT.jar`, `.mrpack` and `.zip`, with Minecraft targets `1.20.1`, `1.21.1`, `26.2` and `26.3`. Standalone JARs contain a checksum-verified service archive and a Windows x64 runtime. Thin development JARs are not release downloads.
 
-Importable downloads are named `RealWorldMC-VERSION-mc1.21.1.mrpack` and
-`RealWorldMC-VERSION-mc26.2.mrpack`. The site matches these names through GitHub's
-public Releases API. No website token is needed. It excludes prereleases from
-the recommended 1.21.1 option, permits them for 26.2, and caches results for five
-minutes. Missing files or API limits show a releases-page fallback, never a guessed URL.
+The website reads public GitHub releases. Its version selector is maintained in the separate site repository; adding a build here does not automatically add a new selector there. Verify 1.20.1 is discoverable before announcing it. GitHub Releases lists all four targets directly.
 
 For a local package, build the appropriate Gradle project, then run
-`./build-release.ps1 -MinecraftVersion 1.21.1` (or `26.2` / `26.3`). The package uses an
+`./build-release.ps1 -MinecraftVersion 1.21.1` (or `1.20.1` / `26.2` / `26.3`). The package uses an
 allowlist and includes LICENSE, NOTICE and LICENSES. It excludes local credentials, logs, caches and worlds. Build-time `npm ci --omit=dev --ignore-scripts` installs locked dependencies into a fresh staging folder. `prepare-service.ps1` downloads a pinned, SHA-256-verified Windows x64 Node runtime, including its licence. Dependencies and runtime enter the pack and standalone JAR; user keys do not. `bundle-jar.ps1` creates the embedded archive without changing the developer JAR. The runtime extracts versioned code away from personal configuration files. Inspect `release-output/` before sharing.
 
 Run `./test-pack.ps1 -Pack <file.mrpack>` before publishing. CI does this automatically: clean extraction, empty PATH, both localhost services, key isolation and parent-exit cleanup. No provider keys are needed for CI. The legacy installer is only an optional shortcut to open the existing pack.
 
-Also run `./mod/gradlew.bat -p mod standaloneJarChecks -PreleaseJar=<absolute-release-jar-path>`. CI runs the matching module task for all three targets. It checks safe extraction, upgrades, key preservation and real service startup/restart with an empty PATH.
+Also run `./mod/gradlew.bat -p mod standaloneJarChecks -PreleaseJar=<absolute-release-jar-path>`. CI runs the matching module task for all four targets. It checks safe extraction, upgrades, key preservation and real service startup/restart with an empty PATH.
 
 Build success checks code and packaging, not every graphics driver or live provider.
 Run a manual Minecraft smoke test before tagging: setup, provider test, flight,
@@ -60,6 +56,10 @@ Workflow behavior follows [GitHub's event triggers](https://docs.github.com/en/a
 
 ## 1.0.2 checks
 
-The workflow also runs the shared Node detection checks on Windows, macOS and Linux. Publishing requires these checks and all three build/package jobs to pass. The 26.3 artifacts use `RealWorldMC-VERSION-mc26.3` as their filename prefix. The website may still show 26.2 as its experimental shortcut; the GitHub release lists both targets.
+The workflow also runs the shared Node detection checks on Windows, macOS and Linux. Publishing requires these checks and all four build/package jobs to pass. The 26.3 artifacts use `RealWorldMC-VERSION-mc26.3` as their filename prefix. The website may still show 26.2 as its experimental shortcut; the GitHub release lists both targets.
 
 `mod-26.3` shares modern source/resources with `mod-26.2`, except the terrain generator and two GPU classes whose APIs changed in 26.3. Build both whenever changing that shared code. See [26.3 details](experimental-26.3.md).
+
+## Current candidate
+
+See [1.0.4 validation and remaining checks](release-1.0.4.md). Build 1.20.1 with JDK 21, targeting Java 17. Its checks can run on Java 17 with `-PchecksJava=<absolute-java17-executable>`; CI builds on 21. Local checks do not substitute for macOS/Linux CI or real provider gameplay.

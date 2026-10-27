@@ -1,184 +1,100 @@
 import os from 'node:os';
-import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { fileURLToPath } from 'node:url';
 import { voxelizeArea } from './voxel.mjs';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const workerPath = path.join(here, 'voxel-worker.mjs');
+const workerUrl = new URL('./voxel-worker.mjs', import.meta.url);
 
 export class VoxelPool {
-  constructor(size) {
-    if (size === undefined || size === null) {
-      const cpus = typeof os.availableParallelism === 'function' ? os.availableParallelism() : (os.cpus()?.length || 4);
-      // Leave at least 1 core for Minecraft / Node HTTP event loop
-      this.size = Math.max(1, Math.min(cpus > 1 ? cpus - 1 : 1, 8));
-    } else {
-      this.size = Math.max(0, Number(size) || 0);
-    }
-
+  constructor(size = Math.max(1, Math.min(2, os.availableParallelism() - 1))) {
+    if (!Number.isInteger(size) || size < 0 || size > 8) throw new RangeError('Voxel workers must be an integer from 0 to 8');
+    this.size = size;
     this.workers = [];
-    this.freeWorkers = [];
     this.queue = [];
-    this.inFlight = new Map();
-    this.nextId = 1;
+    this.nextId = 0;
     this.closing = false;
-
-    if (this.size > 0) {
-      this._initWorkers();
-    }
-  }
-
-  _initWorkers() {
-    for (let i = 0; i < this.size; i++) {
-      this._spawnWorker();
-    }
+    this.maxQueue = Math.max(4, size * 4);
+    for (let i = 0; i < size; i++) this._spawnWorker();
   }
 
   _spawnWorker() {
-    if (this.closing) return null;
-    let worker;
+    if (this.closing) return;
     try {
-      worker = new Worker(workerPath);
-      worker.unref(); // Do not block process exit when idle
-    } catch (e) {
-      console.warn(`[voxel-pool] Failed to spawn worker thread: ${e.message}. Falling back to sync execution.`);
-      return null;
-    }
-
-    const state = { worker, activeId: null };
-    this.workers.push(state);
-
-    worker.on('message', (msg) => {
+      const worker = new Worker(workerUrl);
+      const state = { worker, task: null, retired: false };
+      this.workers.push(state);
+      worker.on('message', msg => {
+        if (state.retired || !state.task || state.task.id !== msg.id) return;
+        const task = state.task;
+        state.task = null;
+        worker.unref();
+        if (msg.success) task.resolve(msg.res);
+        else task.reject(Object.assign(new Error(msg.error), { status: msg.status }));
+        this._drain();
+      });
+      worker.on('error', error => this._retire(state, error));
+      worker.on('exit', () => this._retire(state, new Error('Voxel worker exited')));
       worker.unref();
-      const { id, success, res, error, status } = msg;
-      const task = this.inFlight.get(id);
-      if (task) {
-        this.inFlight.delete(id);
-        if (success) {
-          task.resolve(res);
-        } else {
-          const err = new Error(error);
-          if (status) err.status = status;
-          task.reject(err);
+      return state;
+    } catch (error) {
+      // Fail queued requests if there is no worker left, rather than hanging the HTTP request.
+      if (!this.workers.length) this._rejectQueue(error);
+    }
+  }
+
+  _rejectQueue(error) {
+    for (const task of this.queue.splice(0)) task.reject(error);
+  }
+
+  _retire(state, error) {
+    if (state.retired) return; // error and exit can both fire for the same worker.
+    state.retired = true;
+    this.workers.splice(this.workers.indexOf(state), 1);
+    if (state.task) state.task.reject(error);
+    state.task = null;
+    void state.worker.terminate();
+    // Respawn only on demand. A broken worker module must not cause an idle restart loop.
+    if (!this.closing && this.queue.length) {
+      this._spawnWorker();
+      this._drain();
+    }
+  }
+
+  _drain() {
+    for (const state of this.workers) {
+      if (state.task || state.retired) continue;
+      while (this.queue.length && !state.task) {
+        const task = this.queue.shift();
+        state.task = task;
+        state.worker.ref();
+        try {
+          const { frame, meshes, x0, z0, w, minY, height, opts, id } = task;
+          state.worker.postMessage({ id, frameData: { lat: frame.lat, lon: frame.lon, h0: frame.h0 }, meshes, x0, z0, w, minY, height, opts });
+        } catch (error) {
+          state.task = null;
+          state.worker.unref();
+          task.reject(error);
         }
       }
-      state.activeId = null;
-      this._processNext(state);
-    });
-
-    worker.on('error', (err) => {
-      console.warn(`[voxel-pool] Worker error: ${err.message}`);
-      this._handleWorkerExit(state);
-    });
-
-    worker.on('exit', (code) => {
-      if (code !== 0 && !this.closing) {
-        console.warn(`[voxel-pool] Worker stopped with exit code ${code}`);
-      }
-      this._handleWorkerExit(state);
-    });
-
-    this.freeWorkers.push(state);
-    return state;
-  }
-
-  _handleWorkerExit(state) {
-    const idx = this.workers.indexOf(state);
-    if (idx !== -1) this.workers.splice(idx, 1);
-    const freeIdx = this.freeWorkers.indexOf(state);
-    if (freeIdx !== -1) this.freeWorkers.splice(freeIdx, 1);
-
-    if (state.activeId != null) {
-      const task = this.inFlight.get(state.activeId);
-      if (task) {
-        this.inFlight.delete(state.activeId);
-        task.reject(new Error('Worker thread crashed during voxelization'));
-      }
     }
-
-    if (!this.closing && this.workers.length < this.size) {
-      const replacement = this._spawnWorker();
-      if (replacement) {
-        this._processNext(replacement);
-      }
-    }
-  }
-
-  _processNext(state) {
-    if (this.queue.length === 0) {
-      if (!this.freeWorkers.includes(state)) {
-        this.freeWorkers.push(state);
-      }
-      return;
-    }
-
-    const task = this.queue.shift();
-    const id = this.nextId++;
-    state.activeId = id;
-    this.inFlight.set(id, task);
-
-    state.worker.ref();
-    state.worker.postMessage({
-      id,
-      frameData: { lat: task.frame.lat, lon: task.frame.lon, h0: task.frame.h0 },
-      meshes: task.meshes,
-      x0: task.x0,
-      z0: task.z0,
-      w: task.w,
-      minY: task.minY,
-      height: task.height,
-      opts: task.opts,
-    });
   }
 
   async voxelize(frame, meshes, x0, z0, w, minY, height, opts = {}) {
-    // If worker threads are disabled or no workers are available, run synchronously
-    if (this.size === 0 || this.workers.length === 0) {
-      return voxelizeArea(frame, meshes, x0, z0, w, minY, height, opts);
-    }
-
+    if (this.closing) throw new Error('Voxel pool closed');
+    if (this.size === 0) return voxelizeArea(frame, meshes, x0, z0, w, minY, height, opts);
+    if (this.workers.length < this.size) this._spawnWorker();
+    if (!this.workers.length) throw Object.assign(new Error('Voxel workers unavailable'), { status: 503 });
+    if (this.queue.length >= this.maxQueue) throw Object.assign(new Error('Terrain queue full; retry shortly'), { status: 503 });
     return new Promise((resolve, reject) => {
-      const task = { frame, meshes, x0, z0, w, minY, height, opts, resolve, reject };
-      const workerState = this.freeWorkers.pop();
-      if (workerState) {
-        const id = this.nextId++;
-        workerState.activeId = id;
-        this.inFlight.set(id, task);
-        workerState.worker.ref();
-        workerState.worker.postMessage({
-          id,
-          frameData: { lat: frame.lat, lon: frame.lon, h0: frame.h0 },
-          meshes,
-          x0,
-          z0,
-          w,
-          minY,
-          height,
-          opts,
-        });
-      } else {
-        this.queue.push(task);
-      }
+      this.queue.push({ id: ++this.nextId, frame, meshes, x0, z0, w, minY, height, opts, resolve, reject });
+      this._drain();
     });
   }
 
   close() {
+    if (this.closing) return;
     this.closing = true;
-    for (const { worker } of this.workers) {
-      try {
-        worker.terminate();
-      } catch (_) {}
-    }
-    this.workers = [];
-    this.freeWorkers = [];
-    for (const [, task] of this.inFlight) {
-      task.reject(new Error('Voxel pool closed'));
-    }
-    this.inFlight.clear();
-    for (const task of this.queue) {
-      task.reject(new Error('Voxel pool closed'));
-    }
-    this.queue = [];
+    const error = new Error('Voxel pool closed');
+    this._rejectQueue(error);
+    for (const state of [...this.workers]) this._retire(state, error);
   }
 }

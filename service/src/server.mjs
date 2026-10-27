@@ -35,7 +35,7 @@ const DEFAULTS = {
   render: { maxSse: 12, falloff: 600, viewportHeight: 1080, fovDeg: 70, far: 8000, fineRadius: 160, maxTiles: 900 },
   superchunkCache: 48,
   decodedTileCache: 1500,
-  voxelWorkers: null, // worker thread count; null = auto (CPUs - 1), 0 = sync
+  voxelWorkers: null, // worker thread count; null = auto (at most two workers), 0 = sync
 };
 
 export function loadConfig(file = path.join(serviceDir, 'config.json')) {
@@ -65,7 +65,7 @@ export class EarthService {
     this.client = new TileClient(cfg);
     this.frames = new Map();
     this.superchunks = new Map();
-    this.voxelPool = new VoxelPool(cfg.voxelWorkers);
+    this.voxelPool = new VoxelPool(cfg.voxelWorkers ?? undefined);
   }
 
   close() {

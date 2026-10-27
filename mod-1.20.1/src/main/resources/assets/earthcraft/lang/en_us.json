@@ -1,0 +1,20 @@
+{
+  "generator.earthcraft.earth": "Real World",
+  "block.earthcraft.map_grass": "Map Grass",
+  "block.earthcraft.map_leaves": "Map Leaves",
+  "block.earthcraft.map_dirt": "Map Dirt",
+  "block.earthcraft.map_stone": "Map Stone",
+  "block.earthcraft.map_asphalt": "Map Asphalt",
+  "block.earthcraft.map_plaster": "Map Plaster",
+  "block.earthcraft.map_brick": "Map Brick",
+  "block.earthcraft.map_wood": "Map Wood",
+  "block.earthcraft.map_sand": "Map Sand",
+  "key.categories.realworldmc": "RealWorldMC",
+  "key.realworldmc.photo.forward": "Next photo forward",
+  "key.realworldmc.photo.backward": "Next photo behind",
+  "key.realworldmc.photo.left": "Next photo to the left",
+  "key.realworldmc.photo.right": "Next photo to the right",
+  "key.realworldmc.photo.report": "Report a problem with this image",
+  "key.realworldmc.photo.walk": "Toggle Street View nearby walk (3x3)",
+  "key.realworldmc.photo.sources": "Show Street View sources and photo credits"
+}

@@ -1,0 +1,63 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+}
+
+base {
+	archivesName = "realworldmc"
+}
+
+repositories {
+    maven {
+        url "https://chocolateminecraft.com/maven"
+        name "Xaero's Maven"
+    }
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"realworldmc" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modCompileOnly "xaero.minimap:xaerominimap-fabric-1.20.1:26.6.0"
+	modCompileOnly "xaero.map:xaeroworldmap-fabric-1.20.1:1.47.0"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 17
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.named('jar') {
+	from('../LICENSE')
+	from('../NOTICE')
+	from('../LICENSES') { into 'LICENSES' }
+}
+
+sourceSets {
+	main { java.srcDir '../shared/src/main/java' }
+}

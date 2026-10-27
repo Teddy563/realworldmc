@@ -1,0 +1,30 @@
+{
+  "required": true,
+  "plugin": "dev.realworldmc.client.map.MapMixinPlugin",
+  "package": "dev.realworldmc.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "ActionBarMixin",
+    "ClientLevelMixin",
+    "CreativeFlightMixin",
+    "FlightChunkVisibilityMixin",
+    "FlightVisibilityMixin",
+    "GameRendererMixin",
+    "KeyboardInputMixin",
+    "OrbitalWorldEffectsMixin",
+    "PhotoCameraMixin",
+    "PhotoColorMaskMixin",
+    "PhotoIrisMixin",
+    "PhotoTerrainMixin",
+    "SpaceModelMixin",
+    "SpacePoseMixin",
+    "SpaceWeatherMixin",
+    "MinimapFBORendererMixin",
+    "GuiMapMixin",
+    "SupportXaeroWorldmapMixin",
+    "StreetShortcutMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

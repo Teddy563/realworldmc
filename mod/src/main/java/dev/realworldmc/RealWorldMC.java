@@ -83,9 +83,10 @@ public class RealWorldMC implements ModInitializer {
 				EarthRegions.load(server, gen);
 			}
 		});
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> { EarthRegions.unload(); TravelLoading.clear(); });
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> { EarthRegions.unload(); TravelLoading.clear(); RegionTravel.clear(); });
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { syncedVersion.remove(handler.player.getUUID()); TravelLoading.disconnect(handler.player.getUUID()); });
 		ServerTickEvents.END_SERVER_TICK.register(RealWorldMC::syncRegions);
+        ServerTickEvents.END_SERVER_TICK.register(RegionTravel::tick);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> { var root = dispatcher.register(
 			Commands.literal("rw")

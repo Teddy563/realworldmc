@@ -176,8 +176,8 @@ export class EarthService {
   }
 
   async renderSelect(frame, cam, space = false, ahead = [0, 0], overrides = {}) {
-    const baseR = space ? spaceRenderOptions(this.cfg.render, spaceAltitude(frame, cam)) : this.cfg.render;
-    const r = { ...baseR, ...overrides };
+    const baseR = { ...this.cfg.render, ...boundedRenderOverrides(overrides) };
+    const r = space ? spaceRenderOptions(baseR, spaceAltitude(frame, cam)) : baseR;
     const sseFactor = r.viewportHeight / (2 * Math.tan((r.fovDeg * Math.PI) / 360));
     const { tiles, pending } = await selectRenderTiles(this.client, frame, cam, {
       maxSse: r.maxSse, sseFactor, far: r.far, fineRadius: r.fineRadius, targetError: this.cfg.collisionError,
@@ -379,3 +379,11 @@ export async function startTerrainServer() {
   });
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await startTerrainServer();
+
+export function boundedRenderOverrides(input) {
+  const result = {};
+  for (const [key, low, high] of [['fineRadius',96,640],['far',4000,24000],['maxTiles',600,2400],['maxSse',4,18]]) {
+    if (Number.isFinite(input[key])) result[key]=Math.max(low,Math.min(high,Math.trunc(input[key])));
+  }
+  return result;
+}

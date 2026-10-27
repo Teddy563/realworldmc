@@ -112,6 +112,7 @@ public final class MapRenderer {
 
 	public void setRegions(RegionsPayload payload) {
 		regions = payload.regions();
+        dev.realworldmc.RegionTravel.clientRegions=regions;
 		RealWorldMC.LOGGER.info("RealWorldMC: {} place(s) in this world", regions.size());
 	}
 
@@ -121,6 +122,11 @@ public final class MapRenderer {
 	}
 
 	private void switchRegion(EarthRegions.Region region) {
+        if(current!=null && region!=null && current.index()!=region.index()) {
+            var delta=dev.realworldmc.Geo.geodeticToMc(current.latitude(),current.longitude(),current.groundHeight(),region.latitude(),region.longitude(),region.groundHeight());
+            if(Math.sqrt(delta[0]*delta[0]+delta[2]*delta[2]+Math.pow(delta[1]-64,2))<30_000)preserveLanding=true;
+        }
+
         if(!preserveLanding)releaseRetained();
         if(preserveLanding && current!=null && region!=null && !displayed.isEmpty()) {
             releaseRetained();
@@ -137,6 +143,7 @@ public final class MapRenderer {
 	/** Render thread. */
 	public void clear() {
 		regions = null;
+        dev.realworldmc.RegionTravel.clientRegions=List.of();
         releaseRetained();preserveLanding=false;
 		resetTiles();
 	}
@@ -177,7 +184,7 @@ public final class MapRenderer {
 		if (all == null || mc.level == null || mc.gameRenderer == null || mc.level.dimension() != Level.OVERWORLD) return;
 		if (!status.isEmpty()) mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
 		Vec3 camAbs = mc.gameRenderer.getMainCamera().getPosition();
-		EarthRegions.Region region = EarthRegions.at(camAbs.x, camAbs.z);
+		EarthRegions.Region region = EarthRegions.at(all,camAbs.x, camAbs.z);
 		if (region != null && (Double.isNaN(region.groundHeight()) || region.index() >= all.size())) region = null;
 		if (!java.util.Objects.equals(region, current)) switchRegion(region);
 		if (region == null) return;

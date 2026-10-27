@@ -112,6 +112,7 @@ public final class MapRenderer {
 
 	public void setRegions(RegionsPayload payload) {
 		regions = payload.regions();
+        dev.realworldmc.RegionTravel.clientRegions=regions;
 		RealWorldMC.LOGGER.info("RealWorldMC: {} place(s) in this world", regions.size());
 	}
 
@@ -121,6 +122,11 @@ public final class MapRenderer {
 	}
 
 	private void switchRegion(EarthRegions.Region region) {
+        if(current!=null && region!=null && current.index()!=region.index()) {
+            var delta=dev.realworldmc.Geo.geodeticToMc(current.latitude(),current.longitude(),current.groundHeight(),region.latitude(),region.longitude(),region.groundHeight());
+            if(Math.sqrt(delta[0]*delta[0]+delta[2]*delta[2]+Math.pow(delta[1]-64,2))<30_000)preserveLanding=true;
+        }
+
         if(!preserveLanding)releaseRetained();
         if(preserveLanding && current!=null && region!=null && !displayed.isEmpty()) {
             releaseRetained();
@@ -137,6 +143,7 @@ public final class MapRenderer {
 	/** Render thread. */
 	public void clear() {
 		regions = null;
+        dev.realworldmc.RegionTravel.clientRegions=List.of();
         releaseRetained();preserveLanding=false;
 		resetTiles();
 	}
@@ -177,8 +184,8 @@ public final class MapRenderer {
 		if (all == null || mc.level == null || mc.gameRenderer == null || mc.level.dimension() != Level.OVERWORLD) return;
 		if (!status.isEmpty()) mc.gui.setOverlayMessage(dev.realworldmc.RWMessages.message(status), false);
 		Vec3 camAbs = mc.gameRenderer.getMainCamera().getPosition();
-		int index = EarthRegions.indexAt(camAbs.x, camAbs.z);
-		EarthRegions.Region region = index >= 0 && index < all.size() && !Double.isNaN(all.get(index).groundHeight()) ? all.get(index) : null;
+		EarthRegions.Region region = EarthRegions.at(all,camAbs.x,camAbs.z);
+        if(region!=null && !Double.isFinite(region.groundHeight()))region=null;
 		if (!java.util.Objects.equals(region, current)) switchRegion(region);
 		if (region == null) return;
 		if (++tickCounter % (mc.player!=null && (mc.player.isFallFlying() || mc.player.getAbilities().flying)?5:10) != 0 || !selecting.compareAndSet(false, true)) return;
@@ -195,8 +202,8 @@ public final class MapRenderer {
         final Vec3 lookAhead=ahead;
 		selector.execute(() -> {
 			try {
-				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d&aheadX=%.2f&aheadZ=%.2f",
-					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0, lookAhead.x, lookAhead.z);
+				String q = String.format(Locale.ROOT, "/render/select?%s&x=%.2f&y=%.2f&z=%.2f&space=%d&aheadX=%.2f&aheadZ=%.2f&fineRadius=%d&far=%d&maxTiles=%d&maxSse=%d",
+					ServiceClient.originQuery(o.latitude(), o.longitude(), o.groundHeight()), cam.x, cam.y, cam.z, space ? 1 : 0, lookAhead.x, lookAhead.z, EarthSettings.getFineRadius(), EarthSettings.getFar(), EarthSettings.getMaxTiles(), EarthSettings.getMaxSse());
 				JsonObject res = ServiceClient.getJson(q, Duration.ofSeconds(30));
 				if (myEpoch != epoch) return;
 				List<Want> list = new ArrayList<>();

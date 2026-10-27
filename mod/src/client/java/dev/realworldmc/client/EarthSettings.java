@@ -23,10 +23,10 @@ public final class EarthSettings {
     public static final int[] MAX_TILES_PRESETS = { 600, 900, 1200, 1600, 2400 };
     public static final int[] MAX_SSE_PRESETS = { 18, 12, 8, 4 };
 
-    private static int fineRadius = DEFAULT_FINE_RADIUS;
-    private static int far = DEFAULT_FAR;
-    private static int maxTiles = DEFAULT_MAX_TILES;
-    private static int maxSse = DEFAULT_MAX_SSE;
+    private static volatile int fineRadius = DEFAULT_FINE_RADIUS;
+    private static volatile int far = DEFAULT_FAR;
+    private static volatile int maxTiles = DEFAULT_MAX_TILES;
+    private static volatile int maxSse = DEFAULT_MAX_SSE;
 
     private static boolean loaded = false;
 
@@ -37,10 +37,10 @@ public final class EarthSettings {
     public static int getMaxTiles() { ensureLoaded(); return maxTiles; }
     public static int getMaxSse() { ensureLoaded(); return maxSse; }
 
-    public static void setFineRadius(int v) { fineRadius = v; }
-    public static void setFar(int v) { far = v; }
-    public static void setMaxTiles(int v) { maxTiles = v; }
-    public static void setMaxSse(int v) { maxSse = v; }
+    public static void setFineRadius(int v) { fineRadius = Math.max(96, Math.min(640, v)); }
+    public static void setFar(int v) { far = Math.max(4000, Math.min(24000, v)); }
+    public static void setMaxTiles(int v) { maxTiles = Math.max(600, Math.min(2400, v)); }
+    public static void setMaxSse(int v) { maxSse = Math.max(4, Math.min(18, v)); }
 
     public static synchronized void ensureLoaded() {
         if (loaded) return;
@@ -51,38 +51,30 @@ public final class EarthSettings {
                 JsonObject json = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
                 if (json.has("render") && json.get("render").isJsonObject()) {
                     JsonObject r = json.getAsJsonObject("render");
-                    if (r.has("fineRadius")) fineRadius = r.get("fineRadius").getAsInt();
-                    if (r.has("far")) far = r.get("far").getAsInt();
-                    if (r.has("maxTiles")) maxTiles = r.get("maxTiles").getAsInt();
-                    if (r.has("maxSse")) maxSse = r.get("maxSse").getAsInt();
+                    if (r.has("fineRadius")) setFineRadius(r.get("fineRadius").getAsInt());
+                    if (r.has("far")) setFar(r.get("far").getAsInt());
+                    if (r.has("maxTiles")) setMaxTiles(r.get("maxTiles").getAsInt());
+                    if (r.has("maxSse")) setMaxSse(r.get("maxSse").getAsInt());
                 }
             }
         } catch (Exception ignored) {}
     }
 
-    public static synchronized void save() {
+    public static synchronized boolean save() {
+        Path file=getConfigFile(), temporary=null;
         try {
-            Path file = getConfigFile();
-            JsonObject json = Files.exists(file) ? JsonParser.parseString(Files.readString(file)).getAsJsonObject() : new JsonObject();
-            JsonObject r = json.has("render") && json.get("render").isJsonObject() ? json.getAsJsonObject("render") : new JsonObject();
-            r.addProperty("fineRadius", fineRadius);
-            r.addProperty("far", far);
-            r.addProperty("maxTiles", maxTiles);
-            r.addProperty("maxSse", maxSse);
-            json.add("render", r);
-
+            JsonObject r=new JsonObject();
+            r.addProperty("fineRadius", getFineRadius()); r.addProperty("far", getFar());
+            r.addProperty("maxTiles", getMaxTiles()); r.addProperty("maxSse", getMaxSse());
+            JsonObject json=new JsonObject(); json.add("render",r);
             Files.createDirectories(file.getParent());
-            Files.writeString(file, new GsonBuilder().setPrettyPrinting().create().toJson(json));
-
-            try {
-                Path serviceConfig = ServiceClient.directory().resolve("config.json");
-                if (Files.exists(serviceConfig)) {
-                    JsonObject sc = JsonParser.parseString(Files.readString(serviceConfig)).getAsJsonObject();
-                    sc.add("render", r);
-                    Files.writeString(serviceConfig, new GsonBuilder().setPrettyPrinting().create().toJson(sc));
-                }
-            } catch (Exception ignored) {}
-        } catch (Exception ignored) {}
+            temporary=Files.createTempFile(file.getParent(), "realworldmc-render-", ".tmp");
+            Files.writeString(temporary,new GsonBuilder().setPrettyPrinting().create().toJson(json));
+            try { Files.move(temporary,file,java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+            catch(java.nio.file.AtomicMoveNotSupportedException unsupported) { Files.move(temporary,file,java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+            return true;
+        } catch(Exception failure) { return false; }
+        finally { if(temporary!=null)try{Files.deleteIfExists(temporary);}catch(Exception ignored){} }
     }
 
     public static void resetDefaults() {
@@ -90,7 +82,6 @@ public final class EarthSettings {
         far = DEFAULT_FAR;
         maxTiles = DEFAULT_MAX_TILES;
         maxSse = DEFAULT_MAX_SSE;
-        save();
     }
 
     private static Path getConfigFile() {

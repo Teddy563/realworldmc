@@ -125,7 +125,7 @@ public class EarthChunkGenerator extends ChunkGenerator {
 	public EarthRegions.Region regionFor(double x, double z) {
 		EarthRegions.Region r = EarthRegions.at(x, z);
 		if (r != null && !Double.isNaN(r.groundHeight())) return r;
-		if (Math.round(x / EarthRegions.SPACING) == 0 && Math.round(z / EarthRegions.SPACING) == 0) {
+		if (Math.hypot(x,z) <= EarthRegions.MAX_REGION_RADIUS) {
 			// Region 0 = this generator's own origin (also before the region list is loaded).
 			double h = groundHeight();
 			EarthRegions.setGroundOfFirst(h);

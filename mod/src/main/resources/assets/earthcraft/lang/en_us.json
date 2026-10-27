@@ -40,5 +40,13 @@
   "gui.realworldmc.guide.subtitle": "Select to fill chat · Esc to close",
   "gui.realworldmc.guide.previous": "Previous",
   "gui.realworldmc.guide.next": "Next",
-  "gui.realworldmc.guide.close": "Close"
+  "gui.realworldmc.guide.close": "Close",
+  "gui.realworldmc.update.releases": "Open Releases",
+  "gui.realworldmc.update.retry": "Check again",
+  "gui.realworldmc.update.current": "Installed: %s",
+  "gui.realworldmc.update.failed": "Could not check GitHub. Check your connection or try again later.",
+  "gui.realworldmc.update.no_asset": "No matching JAR is published for this Minecraft version. Check Releases.",
+  "gui.realworldmc.update.replace": "Close Minecraft, download the matching JAR from Releases, and replace the old RealWorldMC JAR. Keep only one copy.",
+  "gui.realworldmc.settings.saved": "Saved and applied.",
+  "gui.realworldmc.settings.save_failed": "Could not save settings. Changes apply only this session."
 }

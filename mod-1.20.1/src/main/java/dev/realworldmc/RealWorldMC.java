@@ -77,9 +77,10 @@ public class RealWorldMC implements ModInitializer {
 				EarthRegions.load(server, gen);
 			}
 		});
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> { EarthRegions.unload(); TravelLoading.clear(); });
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> { EarthRegions.unload(); TravelLoading.clear(); RegionTravel.clear(); });
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { syncedVersion.remove(handler.player.getUUID()); TravelLoading.disconnect(handler.player.getUUID()); });
 		ServerTickEvents.END_SERVER_TICK.register(RealWorldMC::syncRegions);
+        ServerTickEvents.END_SERVER_TICK.register(RegionTravel::tick);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> { var root = dispatcher.register(
 			Commands.literal("rw")
@@ -88,6 +89,14 @@ public class RealWorldMC implements ModInitializer {
                     .then(Commands.literal("more").executes(ctx -> moreHelp(ctx.getSource()))))
                 .then(Commands.literal("setup").executes(ctx -> {
                     ctx.getSource().sendSuccess(() -> RWMessages.message("Open RealWorldMC setup on your Minecraft title screen. The updated client opens it with /earth setup. Do not enter keys in chat."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("update").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> RWMessages.message("Check the update status in the in-game menu or run /earth update on the client."), false);
+                    return 1;
+                }))
+                .then(Commands.literal("settings").executes(ctx -> {
+                    ctx.getSource().sendSuccess(() -> RWMessages.message("Open RealWorldMC render settings with /earth settings on the client."), false);
                     return 1;
                 }))
                 .then(Commands.literal("back").executes(ctx -> PanoramaRoom.exit(ctx.getSource())).then(Commands.literal("original").executes(ctx -> { if(ctx.getSource().getPlayer()!=null)PanoramaRoom.restore(ctx.getSource().getPlayer());return 1; })))

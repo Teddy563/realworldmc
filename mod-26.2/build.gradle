@@ -53,7 +53,7 @@ sourceSets {
     checks {
         java.srcDir '../shared/src/checks/java'
         java.srcDir '../mod/src/checks/java'
-        java.include 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java', 'dev/realworldmc/NodeRuntimeChecks.java'
+        java.include 'dev/realworldmc/ReleaseMetadataChecks.java', 'dev/realworldmc/RegionBoundaryChecks.java', 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java', 'dev/realworldmc/NodeRuntimeChecks.java'
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
@@ -86,3 +86,17 @@ tasks.register('nodeRuntimeChecks', JavaExec) {
     mainClass = 'dev.realworldmc.NodeRuntimeChecks'
 }
 tasks.named('check') { dependsOn tasks.named('nodeRuntimeChecks') }
+
+tasks.register('regionBoundaryChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.RegionBoundaryChecks'
+}
+tasks.named('check') { dependsOn tasks.named('regionBoundaryChecks') }
+
+tasks.register('releaseMetadataChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.ReleaseMetadataChecks'
+}
+tasks.named('check') { dependsOn tasks.named('releaseMetadataChecks') }

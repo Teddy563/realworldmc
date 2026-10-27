@@ -25,6 +25,8 @@ public final class HelpScreen extends Screen {
         new Entry("Movement","/earth walk on|off","Walk inside 3×3, or stay at the photo center. V also toggles."),
         new Entry("Movement","/earth camera first|back|front","Choose your perspective. F5 also changes camera."),
         new Entry("Movement","/earth streetkey on|off","Toggle Sneak + Swap Offhand with empty hands (usually Shift + F)."),
+        new Entry("Display","/earth settings","Adjust map detail and rendering limits."),
+        new Entry("Display","/earth update","Check releases and installation instructions."),
         new Entry("Display","/earth hud on|off","Show or hide the optional HUD and navigation arrows."),
         new Entry("Display","/earth usage on|off","Show or hide usage estimates separately."),
         new Entry("Display","/earth controls on|off","Show or hide key hints separately."),
@@ -40,28 +42,17 @@ public final class HelpScreen extends Screen {
         new Entry("Advanced","/earth setlocation random","Randomize the start for NEW worlds. Operator only.")
     };
     private static int requested=-1;
-    private static boolean updateRequested=false;
     private int page,left,top,panelWidth,panelHeight,perPage;
     public HelpScreen(boolean advanced){super(Component.translatable("gui.realworldmc.guide.title"));page=advanced?-1:0;}
     public static void register(){
         ClientSendMessageEvents.ALLOW_COMMAND.register(command->{
             String normalized=command.strip().replaceAll("\\s+"," ");
-            if(normalized.matches("(?:rw|earth) update")){
-                updateRequested=true;return false;
-            }
             if(normalized.matches("(?:rw|earth)(?: help(?: more)?)?")){
                 requested=normalized.endsWith(" more")?1:0;return false;
             }
             return true;
         });
         ClientTickEvents.END_CLIENT_TICK.register(client->{
-            if(updateRequested){
-                updateRequested=false;
-                if(client.player!=null){
-                    var release = UpdateChecker.getAvailableUpdate();
-                    client.setScreen(new UpdateScreen(null, release));
-                }
-            }
             if(requested>=0){boolean advanced=requested==1;requested=-1;if(client.player!=null)client.setScreen(new HelpScreen(advanced));}
         });
     }
@@ -80,12 +71,6 @@ public final class HelpScreen extends Screen {
         int y=top+panelHeight-29;
         var previous=addRenderableWidget(new GuideButton(left+10,y,70,20,Component.translatable("gui.realworldmc.guide.previous").getString(),()->{page--;rebuildWidgets();},null));previous.active=page>0;
         var next=addRenderableWidget(new GuideButton(left+84,y,70,20,Component.translatable("gui.realworldmc.guide.next").getString(),()->{page++;rebuildWidgets();},null));next.active=end<ENTRIES.length;
-
-        if (UpdateChecker.hasUpdate()) {
-            var updateRelease = UpdateChecker.getAvailableUpdate();
-            String updateLabel = "Update: v" + updateRelease.version();
-            addRenderableWidget(new GuideButton(left+158,y,140,20,updateLabel,()->minecraft.setScreen(new UpdateScreen(this, updateRelease)),null));
-        }
 
         addRenderableWidget(new GuideButton(left+panelWidth-76,y,70,20,Component.translatable("gui.realworldmc.guide.close").getString(),this::onClose,null));
     }

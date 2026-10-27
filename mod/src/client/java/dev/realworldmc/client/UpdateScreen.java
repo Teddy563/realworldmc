@@ -5,221 +5,56 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
-
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Screen displaying update information, changelog, and confirmation to download and install.
- */
+/** Read-only changelog with a browser handoff for replacing the mod safely. */
 public final class UpdateScreen extends Screen {
     private final Screen parent;
     private UpdateChecker.ReleaseInfo release;
-    private int left, top, panelWidth, panelHeight;
-    private int scrollOffset = 0;
-    private final List<FormattedCharSequence> formattedChangelog = new ArrayList<>();
-    private boolean downloading = false;
-    private boolean completed = false;
-    private String statusText = "";
-    private int progressPercent = 0;
-    private Button downloadButton;
-
+    private int scroll, left, top, panelWidth, panelHeight;
+    private static boolean openRequested;
     public UpdateScreen(Screen parent, UpdateChecker.ReleaseInfo release) {
-        super(Component.translatable("gui.realworldmc.update.title"));
-        this.parent = parent;
-        this.release = release;
+        super(Component.translatable("gui.realworldmc.update.title")); this.parent=parent; this.release=release;
     }
-
-    private static volatile boolean openRequested = false;
-
     public static void register() {
         net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
-            String c = command.strip().toLowerCase(java.util.Locale.ROOT);
-            if (c.startsWith("/")) c = c.substring(1).stripLeading();
-            if (c.matches("(?:rw|earth)\\s+update.*")) {
-                openRequested = true;
-                return false;
-            }
-            return true;
+            if (command.strip().matches("/?(?:rw|earth)\\s+update")) { openRequested=true; return false; } return true;
         });
-
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (openRequested) {
-                openRequested = false;
-                var rel = UpdateChecker.getLatestRelease();
-                var screen = new UpdateScreen(client.screen, rel);
-                client.setScreen(screen);
-                if (rel == null) {
-                    UpdateChecker.checkAsync().thenAccept(fresh -> {
-                        client.execute(() -> screen.updateRelease(fresh));
-                    });
-                }
-            }
+            if (!openRequested) return; openRequested=false;
+            client.setScreen(new UpdateScreen(null, UpdateChecker.getLatestRelease()));
         });
     }
-
-    public void updateRelease(UpdateChecker.ReleaseInfo fresh) {
-        this.release = fresh;
-        prepareChangelog();
-        if (downloadButton != null) {
-            boolean isNewer = release != null && release.isNewer();
-            Component btnText = isNewer ? Component.translatable("gui.realworldmc.update.download") : Component.translatable("gui.realworldmc.update.reinstall");
-            downloadButton.setMessage(btnText);
-            downloadButton.active = release != null && !downloading && !completed;
-        }
+    public void updateRelease(UpdateChecker.ReleaseInfo fresh) { release=fresh; scroll=0; }
+    @Override protected void init() {
+        panelWidth=Math.min(480,width-16); panelHeight=Math.min(340,height-16);
+        left=(width-panelWidth)/2; top=(height-panelHeight)/2;
+        int buttonWidth=(panelWidth-32)/3;
+        addRenderableWidget(Button.builder(Component.translatable("gui.realworldmc.update.releases"), b ->
+            net.minecraft.Util.getPlatform().openUri(UpdateChecker.RELEASES)).bounds(left+8,top+panelHeight-28,buttonWidth,20).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.realworldmc.update.retry"), b -> refresh()).bounds(left+16+buttonWidth,top+panelHeight-28,buttonWidth,20).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.realworldmc.update.close"), b -> onClose()).bounds(left+24+buttonWidth*2,top+panelHeight-28,buttonWidth,20).build());
+        if (release==null) refresh();
     }
-
-    @Override
-    public boolean isPauseScreen() {
-        return true;
+    private void refresh() {
+        var client=minecraft;
+        UpdateChecker.checkAsync().thenAccept(value -> client.execute(() -> updateRelease(value)));
     }
-
-    @Override
-    protected void init() {
-        panelWidth = Math.min(480, width - 24);
-        panelHeight = Math.min(340, height - 24);
-        left = (width - panelWidth) / 2;
-        top = (height - panelHeight) / 2;
-
-        prepareChangelog();
-
-        int buttonY = top + panelHeight - 32;
-
-        boolean isNewer = release != null && release.isNewer();
-        Component btnText = completed ? Component.translatable("gui.realworldmc.update.ready") :
-                (isNewer ? Component.translatable("gui.realworldmc.update.download") : Component.translatable("gui.realworldmc.update.reinstall"));
-
-        downloadButton = addRenderableWidget(Button.builder(
-                btnText,
-                b -> startDownload()
-        ).bounds(left + 12, buttonY, 150, 20).build());
-        downloadButton.active = release != null && !downloading && !completed;
-
-        addRenderableWidget(Button.builder(
-                Component.translatable("gui.realworldmc.update.close"),
-                b -> onClose()
-        ).bounds(left + panelWidth - 92, buttonY, 80, 20).build());
+    @Override public boolean mouseScrolled(double x,double y,double horizontal,double vertical) {
+        scroll=Math.max(0,scroll-(int)(vertical*20)); return true;
     }
-
-    private void prepareChangelog() {
-        formattedChangelog.clear();
-        if (release == null) {
-            formattedChangelog.addAll(font.split(Component.translatable("gui.realworldmc.update.connecting"), panelWidth - 36));
-            return;
-        }
-        if (release.changelog() == null || release.changelog().isBlank()) {
-            formattedChangelog.addAll(font.split(Component.literal("Brak opisu zmian (No changelog provided)."), panelWidth - 36));
-            return;
-        }
-
-        String[] rawLines = release.changelog().split("\r?\n");
-        int maxTextWidth = panelWidth - 36;
-
-        for (String raw : rawLines) {
-            String line = raw.trim();
-            if (line.isEmpty()) {
-                formattedChangelog.addAll(font.split(Component.literal(" "), maxTextWidth));
-                continue;
-            }
-            // Strip markdown bold / headers / bullets nicely
-            if (line.startsWith("#")) line = "§a" + line.replaceAll("^#+\\s*", "");
-            else if (line.startsWith("- ") || line.startsWith("* ")) line = "§7• " + line.substring(2);
-
-            formattedChangelog.addAll(font.split(Component.literal(line), maxTextWidth));
-        }
+    @Override public void render(GuiGraphics g,int mx,int my,float delta) {
+        g.fill(0,0,width,height,0xC0000000); g.fill(left,top,left+panelWidth,top+panelHeight,0xFF1E2224);
+        g.drawString(font,title,left+10,top+10,RWTheme.GREEN,false);
+        g.drawString(font,Component.translatable("gui.realworldmc.update.current",UpdateChecker.getCurrentVersion()),left+10,top+24,RWTheme.MUTED,false);
+        Component content;
+        if (release==null) content=Component.translatable(UpdateChecker.isChecking()?"gui.realworldmc.update.connecting":"gui.realworldmc.update.failed");
+        else content=Component.literal("v"+release.version()+"\n\n").append(Component.translatable(release.downloadUrl()==null?"gui.realworldmc.update.no_asset":"gui.realworldmc.update.replace")).append("\n\n"+release.changelog());
+        List<net.minecraft.util.FormattedCharSequence> lines=font.split(content,Math.max(40,panelWidth-24));
+        int viewHeight=Math.max(10,panelHeight-80); scroll=Math.min(scroll,Math.max(0,lines.size()*10-viewHeight));
+        g.enableScissor(left+8,top+42,left+panelWidth-8,top+42+viewHeight);
+        int y=top+42-scroll; for(var line:lines){g.drawString(font,line,left+12,y,0xDDDDDD,false);y+=10;}
+        g.disableScissor(); super.render(g,mx,my,delta);
     }
-
-    private void startDownload() {
-        if (downloading || completed || release == null) return;
-        downloading = true;
-        downloadButton.active = false;
-        statusText = "Downloading update...";
-
-        UpdateChecker.downloadUpdateAsync(release, (read, total) -> {
-            progressPercent = (int) ((read * 100) / Math.max(1, total));
-            statusText = "Downloading: " + progressPercent + "% (" + (read / 1024 / 1024) + "MB / " + (total / 1024 / 1024) + "MB)";
-        }).thenAccept(path -> {
-            if (minecraft != null) {
-                minecraft.execute(() -> {
-                    downloading = false;
-                    completed = true;
-                    statusText = "Update downloaded! Restart Minecraft to apply.";
-                    downloadButton.setMessage(Component.translatable("gui.realworldmc.update.installed"));
-                });
-            }
-        }).exceptionally(ex -> {
-            if (minecraft != null) {
-                minecraft.execute(() -> {
-                    downloading = false;
-                    downloadButton.active = true;
-                    statusText = "Download failed: " + ex.getMessage();
-                });
-            }
-            return null;
-        });
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int contentHeight = formattedChangelog.size() * 10;
-        int viewHeight = panelHeight - 110;
-        if (contentHeight > viewHeight) {
-            scrollOffset = Math.max(0, Math.min(scrollOffset - (int) (verticalAmount * 16), contentHeight - viewHeight));
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        g.fill(0, 0, width, height, 0xC0000000);
-        g.fill(left, top, left + panelWidth, top + panelHeight, 0xFF1E2224);
-        g.fill(left, top, left + 3, top + panelHeight, RWTheme.BRAND);
-
-        // Header
-        boolean isNewer = release != null && release.isNewer();
-        if (release == null) {
-            g.drawString(font, Component.translatable("gui.realworldmc.update.checking"), left + 14, top + 12, RWTheme.GREEN, false);
-            g.drawString(font, "Current: v" + UpdateChecker.getCurrentVersion() + " (Connecting to GitHub...)", left + 14, top + 26, RWTheme.MUTED, false);
-        } else if (isNewer) {
-            g.drawString(font, Component.translatable("gui.realworldmc.update.heading"), left + 14, top + 12, RWTheme.GREEN, false);
-            String versionStr = "Current: v" + UpdateChecker.getCurrentVersion() + "  ->  §aNew: v" + release.version();
-            g.drawString(font, versionStr, left + 14, top + 26, RWTheme.MUTED, false);
-        } else {
-            g.drawString(font, Component.translatable("gui.realworldmc.update.up_to_date"), left + 14, top + 12, RWTheme.GREEN, false);
-            String versionStr = "Wersja: v" + UpdateChecker.getCurrentVersion() + " §a(Najnowsza wersja)§r";
-            g.drawString(font, versionStr, left + 14, top + 26, RWTheme.MUTED, false);
-        }
-
-        // Changelog Box
-        int boxX = left + 12, boxY = top + 42, boxW = panelWidth - 24, boxH = panelHeight - 88;
-        g.fill(boxX, boxY, boxX + boxW, boxY + boxH, 0xFF141719);
-
-        g.enableScissor(boxX, boxY, boxX + boxW, boxY + boxH);
-        int textY = boxY + 6 - scrollOffset;
-        for (var line : formattedChangelog) {
-            if (textY + 10 >= boxY && textY <= boxY + boxH) {
-                g.drawString(font, line, boxX + 6, textY, 0xDDDDDD, false);
-            }
-            textY += 10;
-        }
-        g.disableScissor();
-
-        // Status / progress
-        if (!statusText.isEmpty()) {
-            int color = completed ? 0x55FF55 : (downloading ? 0xFFFF55 : 0xFF5555);
-            g.drawString(font, statusText, left + 14, top + panelHeight - 46, color, false);
-        }
-
-        super.render(g, mouseX, mouseY, delta);
-    }
-
-    @Override
-    public void onClose() {
-        if (minecraft != null) {
-            minecraft.setScreen(parent);
-        }
-    }
+    @Override public void onClose(){minecraft.setScreen(parent);}
 }

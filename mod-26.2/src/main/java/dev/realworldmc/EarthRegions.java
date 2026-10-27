@@ -42,18 +42,19 @@ public final class EarthRegions {
 	private EarthRegions() {}
 
 	/** Region whose cell contains the block position within active radius, or null in the buffer zone. */
-	public static Region at(double x, double z) {
-		int index = indexAt(x, z);
-		if (index < 0 || index >= regions.size()) return null;
-		Region r = regions.get(index);
-		double dx = x - r.offsetX(), dz = z - r.offsetZ();
-		return (dx * dx + dz * dz <= MAX_REGION_RADIUS * MAX_REGION_RADIUS) ? r : null;
-	}
+    public static Region at(double x,double z) { return at(regions,x,z); }
+    public static Region at(List<Region> list,double x,double z) {
+        if(list==null || !Double.isFinite(x) || !Double.isFinite(z))return null;
+        int index=indexAt(x,z);
+        if(index<0 || index>=list.size())return null;
+        var region=list.get(index);
+        return Math.hypot(x-region.offsetX(),z-region.offsetZ())<=MAX_REGION_RADIUS?region:null;
+    }
 
 	/** Grid cell index for a block position (-1 outside the grid). Same on client and server. */
 	public static int indexAt(double x, double z) {
 		long gx = Math.round(x / SPACING), gz = Math.round(z / SPACING);
-		if (gx < 0 || gz < 0 || gx >= GRID) return -1;
+		if (gx < 0 || gz < 0 || gx >= GRID || gz >= GRID) return -1;
 		return (int) (gz * GRID + gx);
 	}
 

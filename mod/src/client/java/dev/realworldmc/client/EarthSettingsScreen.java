@@ -35,7 +35,7 @@ public final class EarthSettingsScreen extends Screen {
         net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents.ALLOW_COMMAND.register(command -> {
             String c = command.strip().toLowerCase(java.util.Locale.ROOT);
             if (c.startsWith("/")) c = c.substring(1).stripLeading();
-            if (c.matches("(?:rw|earth)\\s+settings.*")) {
+            if (c.matches("(?:rw|earth)\\s+settings")) {
                 openRequested = true;
                 return false;
             }
@@ -45,7 +45,7 @@ public final class EarthSettingsScreen extends Screen {
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (openRequested) {
                 openRequested = false;
-                client.setScreen(new EarthSettingsScreen(client.screen));
+                client.setScreen(new EarthSettingsScreen(null));
             }
         });
     }
@@ -83,7 +83,7 @@ public final class EarthSettingsScreen extends Screen {
         top = (height - panelHeight) / 2;
 
         int rowY = top + 42;
-        int btnW = 200;
+        int btnW = Math.min(170, panelWidth / 2 - 16);
         int btnX = left + panelWidth - btnW - 16;
 
         // 1. Fine Radius
@@ -97,7 +97,7 @@ public final class EarthSettingsScreen extends Screen {
         ).bounds(btnX, rowY, btnW, 20).build());
 
         // 2. Far distance
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         farBtn = addRenderableWidget(Button.builder(
                 getFarText(),
                 b -> {
@@ -108,7 +108,7 @@ public final class EarthSettingsScreen extends Screen {
         ).bounds(btnX, rowY, btnW, 20).build());
 
         // 3. Max tiles
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         maxTilesBtn = addRenderableWidget(Button.builder(
                 getMaxTilesText(),
                 b -> {
@@ -119,7 +119,7 @@ public final class EarthSettingsScreen extends Screen {
         ).bounds(btnX, rowY, btnW, 20).build());
 
         // 4. Max SSE / Quality
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         maxSseBtn = addRenderableWidget(Button.builder(
                 getMaxSseText(),
                 b -> {
@@ -134,23 +134,23 @@ public final class EarthSettingsScreen extends Screen {
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.realworldmc.settings.save"),
                 b -> applyAndSave()
-        ).bounds(left + 16, bottomY, 130, 20).build());
+        ).bounds(left + 8, bottomY, (panelWidth-32)/3, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.realworldmc.settings.defaults"),
                 b -> resetDefaults()
-        ).bounds(left + 154, bottomY, 100, 20).build());
+        ).bounds(left + 16+(panelWidth-32)/3, bottomY, (panelWidth-32)/3, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.realworldmc.update.close"),
                 b -> onClose()
-        ).bounds(left + panelWidth - 96, bottomY, 80, 20).build());
+        ).bounds(left + 24+2*((panelWidth-32)/3), bottomY, (panelWidth-32)/3, 20).build());
     }
 
     private Component getFineRadiusText() {
         int val = EarthSettings.FINE_RADIUS_PRESETS[fineRadiusIdx];
         int chunks = val / 16;
-        String note = (val == EarthSettings.DEFAULT_FINE_RADIUS) ? " (Domyślne)" : "";
+        String note = "";
         return Component.literal(val + " m (" + chunks + " ch.)" + note);
     }
 
@@ -158,23 +158,23 @@ public final class EarthSettingsScreen extends Screen {
         int val = EarthSettings.FAR_PRESETS[farIdx];
         int km = val / 1000;
         int chunks = val / 16;
-        String note = (val == EarthSettings.DEFAULT_FAR) ? " (Domyślne)" : "";
+        String note = "";
         return Component.literal(km + " km (" + chunks + " ch.)" + note);
     }
 
     private Component getMaxTilesText() {
         int val = EarthSettings.MAX_TILES_PRESETS[maxTilesIdx];
-        String note = (val == EarthSettings.DEFAULT_MAX_TILES) ? " (Domyślny)" : (val >= 1600 ? " (Dla M4)" : "");
-        return Component.literal(val + " kafli" + note);
+        String note = "";
+        return Component.literal(val + " tiles" + note);
     }
 
     private Component getMaxSseText() {
         int val = EarthSettings.MAX_SSE_PRESETS[maxSseIdx];
         String label = switch (val) {
-            case 18 -> "Wydajność (18)";
-            case 12 -> "Standard (12)";
-            case 8 -> "Wysoka jakość (8)";
-            case 4 -> "Ultra / Ostra (4)";
+            case 18 -> "18";
+            case 12 -> "12";
+            case 8 -> "8";
+            case 4 -> "4";
             default -> String.valueOf(val);
         };
         return Component.literal(label);
@@ -185,8 +185,7 @@ public final class EarthSettingsScreen extends Screen {
         EarthSettings.setFar(EarthSettings.FAR_PRESETS[farIdx]);
         EarthSettings.setMaxTiles(EarthSettings.MAX_TILES_PRESETS[maxTilesIdx]);
         EarthSettings.setMaxSse(EarthSettings.MAX_SSE_PRESETS[maxSseIdx]);
-        EarthSettings.save();
-        statusMsg = "§aZapisano i zastosowano na żywo!";
+        statusMsg = Component.translatable(EarthSettings.save()?"gui.realworldmc.settings.saved":"gui.realworldmc.settings.save_failed").getString();
     }
 
     private void resetDefaults() {
@@ -196,7 +195,7 @@ public final class EarthSettingsScreen extends Screen {
         if (farBtn != null) farBtn.setMessage(getFarText());
         if (maxTilesBtn != null) maxTilesBtn.setMessage(getMaxTilesText());
         if (maxSseBtn != null) maxSseBtn.setMessage(getMaxSseText());
-        statusMsg = "§ePrzywrócono ustawienia domyślne.";
+        statusMsg = Component.translatable(EarthSettings.save()?"gui.realworldmc.settings.saved":"gui.realworldmc.settings.save_failed").getString();
     }
 
     @Override
@@ -213,11 +212,11 @@ public final class EarthSettingsScreen extends Screen {
         int labelX = left + 16;
         int rowY = top + 47;
         g.drawString(font, Component.translatable("gui.realworldmc.settings.fine_radius"), labelX, rowY, 0xEEEEEE, false);
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         g.drawString(font, Component.translatable("gui.realworldmc.settings.far"), labelX, rowY, 0xEEEEEE, false);
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         g.drawString(font, Component.translatable("gui.realworldmc.settings.max_tiles"), labelX, rowY, 0xEEEEEE, false);
-        rowY += 32;
+        rowY += Math.min(32, (panelHeight - 105) / 3);
         g.drawString(font, Component.translatable("gui.realworldmc.settings.max_sse"), labelX, rowY, 0xEEEEEE, false);
 
         // Status message

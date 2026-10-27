@@ -260,3 +260,17 @@ tasks.named('runStreetWalkingCheck') {
         if (!result.exists() || !result.text.startsWith('PASS:')) throw new GradleException(result.exists() ? result.text : 'Street walking check did not finish')
     }
 }
+
+tasks.register('regionBoundaryChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.RegionBoundaryChecks'
+}
+tasks.named('check') { dependsOn tasks.named('regionBoundaryChecks') }
+
+tasks.register('releaseMetadataChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    classpath = sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.ReleaseMetadataChecks'
+}
+tasks.named('check') { dependsOn tasks.named('releaseMetadataChecks') }

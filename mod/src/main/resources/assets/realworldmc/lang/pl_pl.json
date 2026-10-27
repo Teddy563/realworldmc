@@ -40,5 +40,13 @@
   "gui.realworldmc.guide.subtitle": "Wybierz, aby wkleić na czat · Esc, aby zamknąć",
   "gui.realworldmc.guide.previous": "Wstecz",
   "gui.realworldmc.guide.next": "Dalej",
-  "gui.realworldmc.guide.close": "Zamknij"
+  "gui.realworldmc.guide.close": "Zamknij",
+  "gui.realworldmc.update.releases": "Otwórz wydania",
+  "gui.realworldmc.update.retry": "Sprawdź ponownie",
+  "gui.realworldmc.update.current": "Zainstalowano: %s",
+  "gui.realworldmc.update.failed": "Nie udało się sprawdzić GitHub. Sprawdź połączenie lub spróbuj później.",
+  "gui.realworldmc.update.no_asset": "Brak pliku JAR dla tej wersji Minecrafta. Sprawdź wydania.",
+  "gui.realworldmc.update.replace": "Zamknij Minecrafta, pobierz pasujący JAR i zastąp poprzedni plik RealWorldMC. Zostaw tylko jedną kopię.",
+  "gui.realworldmc.settings.saved": "Zapisano i zastosowano.",
+  "gui.realworldmc.settings.save_failed": "Nie udało się zapisać. Zmiany dotyczą tylko tej sesji."
 }

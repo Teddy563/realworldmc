@@ -1,4 +1,4 @@
-param([ValidateSet('1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$ServiceDirectory = '', [string]$OutputDirectory = $PSScriptRoot, [switch]$VisualPack)
+param([ValidateSet('1.20.1','1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$ServiceDirectory = '', [string]$OutputDirectory = $PSScriptRoot, [switch]$VisualPack)
 $ErrorActionPreference = 'Stop'
 $jarName = if ($MinecraftVersion -ne '1.21.1') { "realworldmc-mc$MinecraftVersion-1.0.0.jar" } else { 'realworldmc-1.0.0.jar' }
 $jar = Join-Path $PSScriptRoot $jarName

@@ -1,4 +1,4 @@
-param([ValidateSet('1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$OutputDirectory = (Join-Path $PSScriptRoot 'release-output'))
+param([ValidateSet('1.20.1','1.21.1','26.2','26.3')][string]$MinecraftVersion = '1.21.1', [string]$OutputDirectory = (Join-Path $PSScriptRoot 'release-output'))
 $ErrorActionPreference = 'Stop'
 $module = if ($MinecraftVersion -ne '1.21.1') { "mod-$MinecraftVersion" } else { 'mod' }
 $versionLine = Get-Content (Join-Path $PSScriptRoot "$module/gradle.properties") | Where-Object { $_ -match '^version=' }

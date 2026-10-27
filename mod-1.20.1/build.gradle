@@ -3,7 +3,7 @@ plugins {
 }
 
 base {
-	archivesName = "realworldmc"
+	archivesName = "realworldmc-mc1.20.1"
 }
 
 repositories {
@@ -60,4 +60,32 @@ tasks.named('jar') {
 
 sourceSets {
 	main { java.srcDir '../shared/src/main/java' }
+}
+
+// Run the existing service/setup checks against the backport classes too.
+sourceSets {
+    checks {
+        java.srcDir '../shared/src/checks/java'
+        java.srcDir '../mod/src/checks/java'
+        java.include 'dev/realworldmc/BundledServiceChecks.java', 'dev/realworldmc/SpawnLocationChecks.java', 'dev/realworldmc/NodeRuntimeChecks.java', 'dev/realworldmc/SetupChecks.java', 'dev/realworldmc/ServiceRuntimeChecks.java', 'dev/realworldmc/StreetNavigationChecks.java', 'dev/realworldmc/MeshCutChecks.java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+['BundledService', 'SpawnLocation', 'NodeRuntime', 'Setup', 'ServiceRuntime', 'StreetNavigation', 'MeshCut'].each { name ->
+    def taskName = name[0].toLowerCase() + name.substring(1) + 'Checks'
+    tasks.register(taskName, JavaExec) {
+        dependsOn tasks.named('checksClasses')
+        classpath = sourceSets.checks.runtimeClasspath
+        mainClass = "dev.realworldmc.${name}Checks"
+    }
+    tasks.named('check') { dependsOn tasks.named(taskName) }
+}
+tasks.register('standaloneJarChecks', JavaExec) {
+    dependsOn tasks.named('checksClasses')
+    doFirst { if (!project.hasProperty('releaseJar')) throw new GradleException('Pass -PreleaseJar=path/to/release.jar') }
+    classpath = files(project.findProperty('releaseJar') ?: 'missing.jar') + sourceSets.checks.runtimeClasspath
+    mainClass = 'dev.realworldmc.BundledServiceChecks'
+    args 'release'
+    environment 'PATH', ''
 }

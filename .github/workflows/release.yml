@@ -37,6 +37,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - minecraft: '1.20.1'
+            module: mod-1.20.1
+            java: '21'
           - minecraft: '1.21.1'
             module: mod
             java: '21'
